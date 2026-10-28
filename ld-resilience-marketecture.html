@@ -206,19 +206,55 @@
   }
   .card.serving .badge { opacity: 1; transform: none; }
 
-  .card.down { opacity: .42; border-style: dashed; box-shadow: none; }
+  .card.down { border-style: dashed; box-shadow: none; }
+  .card > :not(.badge), .chead h3 { transition: opacity .2s cubic-bezier(0.2,0,0,1); }
+  .card.down > :not(.chead):not(.badge), .card.down .chead h3 { opacity: .42; }
   .card.down .dot { background: var(--warn); }
+
+  /* ---------- layer toggles ---------- */
+  .chead { display: flex; align-items: center; gap: 10px; }
+  .tog {
+    margin-left: auto;
+    flex: 0 0 auto;
+    width: 40px; height: 24px;
+    padding: 0;
+    border: 0;
+    border-radius: 999px;
+    background: var(--blue);
+    position: relative;
+    cursor: pointer;
+    transition: background .2s cubic-bezier(0.2,0,0,1);
+  }
+  .tog::after {
+    content: "";
+    position: absolute;
+    top: 3px; left: 19px;
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #fff;
+    box-shadow: var(--shadow-sm);
+    transition: left .2s cubic-bezier(0.2,0,0,1);
+  }
+  .tog[aria-checked="false"] { background: var(--muted); }
+  .tog[aria-checked="false"]::after { left: 3px; }
+  .tog:active { transform: none; }
+  .fixed { margin-left: auto; font-size: 11.5px; color: var(--muted); }
 
   .azrow { display: flex; gap: 6px; flex-wrap: wrap; }
   .az {
-    font-family: "JetBrains Mono", monospace;
-    font-size: 11px;
+    font: 500 11px/1.4 "JetBrains Mono", monospace;
     color: var(--muted);
+    background: transparent;
     border: 1px solid var(--border);
     border-radius: 999px;
-    padding: 2px 9px;
+    padding: 4px 10px;
+    min-height: 24px;
+    cursor: pointer;
     transition: opacity .2s cubic-bezier(0.2,0,0,1);
   }
+  .az:hover { background: var(--blue-ghost); }
+  .az[aria-disabled="true"] { cursor: default; }
+  .az[aria-disabled="true"]:hover { background: transparent; }
   .az.down { border-style: dashed; border-color: #E5484D; color: #E5484D; text-decoration: line-through; }
 
   .chips { display: flex; gap: 6px; flex-wrap: wrap; }
@@ -370,7 +406,7 @@
 <main class="section">
   <div class="lede">
     <h1>Your app stays online, wherever connectivity breaks.</h1>
-    <p>If LaunchDarkly has a problem, <strong>you don’t</strong>. Every layer between our cloud and your code can answer when everything upstream is unreachable. Break things, in order, and watch your app keep serving.</p>
+    <p>If LaunchDarkly has a problem, <strong>you don’t</strong>. Every layer between our cloud and your code can answer when everything upstream is unreachable. Break things in order, or switch any layer off yourself, and watch your app keep serving.</p>
   </div>
 
   <div class="arch" aria-label="LaunchDarkly resilience architecture">
@@ -383,7 +419,7 @@
             <div class="cards">
               <article class="card" id="c-sdk">
                 <span class="badge">Serving now</span>
-                <h3>SDK</h3>
+                <div class="chead"><h3>SDK</h3><span class="fixed">always on</span></div>
                 <p class="role">Evaluates every decision in-process</p>
                 <div class="chips">
                   <span class="chip">local evaluation</span>
@@ -394,7 +430,7 @@
               <div class="pipe" id="p1"><div class="line"></div></div>
               <article class="card" id="c-cache">
                 <span class="badge">Serving now</span>
-                <h3>Local cache</h3>
+                <div class="chead"><h3>Local cache</h3><button class="tog" role="switch" aria-checked="true" data-layer="cache" aria-label="Local cache"></button></div>
                 <p class="role">Last-known state, held by the running SDK</p>
                 <div class="status"><i class="dot"></i><span class="slabel">healthy</span></div>
               </article>
@@ -403,7 +439,7 @@
           <div class="pipe" id="p2"><div class="line"></div></div>
           <article class="card" id="c-relay" style="flex:0 1 240px">
             <span class="badge">Serving now</span>
-            <h3>Relay Proxy</h3>
+            <div class="chead"><h3>Relay Proxy</h3><button class="tog" role="switch" aria-checked="true" data-layer="relay" aria-label="Relay Proxy"></button></div>
             <p class="role">Optional. Runs in your network with the latest LaunchDarkly state — serves even fully disconnected</p>
             <div class="status"><i class="dot"></i><span class="slabel">healthy</span></div>
           </article>
@@ -417,19 +453,19 @@
       <span class="zlabel">LaunchDarkly</span>
       <article class="card" id="c-east" style="flex:0 0 auto">
         <span class="badge">Serving now</span>
-        <h3>Region 1</h3>
+        <div class="chead"><h3>Region 1</h3><button class="tog" role="switch" aria-checked="true" data-layer="east" aria-label="Region 1"></button></div>
         <p class="role">Primary region</p>
         <div class="azrow">
-          <span class="az" id="az-a">AZ-a</span>
-          <span class="az" id="az-b">AZ-b</span>
-          <span class="az" id="az-c">AZ-c</span>
+          <button class="az" id="az-a" data-layer="a" role="switch" aria-checked="true" aria-label="Availability zone A">AZ-a</button>
+          <button class="az" id="az-b" data-layer="b" role="switch" aria-checked="true" aria-label="Availability zone B">AZ-b</button>
+          <button class="az" id="az-c" data-layer="c" role="switch" aria-checked="true" aria-label="Availability zone C">AZ-c</button>
         </div>
         <div class="status"><i class="dot"></i><span class="slabel">healthy</span></div>
       </article>
       <div class="failover" id="fo"><span>automatic failover</span></div>
       <article class="card" id="c-west" style="flex:0 0 auto">
         <span class="badge">Serving now</span>
-        <h3>Region 2</h3>
+        <div class="chead"><h3>Region 2</h3><button class="tog" role="switch" aria-checked="true" data-layer="west" aria-label="Region 2"></button></div>
         <p class="role">Warm failover region</p>
         <div class="status"><i class="dot"></i><span class="slabel">healthy</span></div>
       </article>
@@ -463,79 +499,179 @@
   var $ = function (id) { return document.getElementById(id); };
   var cards = { east: $("c-east"), west: $("c-west"), relay: $("c-relay"), cache: $("c-cache"), sdk: $("c-sdk") };
   var pipes = { p1: $("p1"), p2: $("p2"), p3: $("p3") };
+  var keys = ["a", "b", "c", "east", "west", "relay", "cache"];
+  var azs = ["a", "b", "c"];
+
+  // A layer state: true = up. "off" lists the layers taken down.
+  function st(off) {
+    var s = {};
+    keys.forEach(function (k) { s[k] = off.indexOf(k) < 0; });
+    return s;
+  }
+  // With Region 1 switched off, its zones no longer change anything.
+  function eff(s) {
+    var e = {};
+    keys.forEach(function (k) { e[k] = s[k] && (azs.indexOf(k) < 0 || s.east); });
+    return e;
+  }
+  function same(x, y) {
+    var a = eff(x), b = eff(y);
+    return keys.every(function (k) { return a[k] === b[k]; });
+  }
+  function offCount(s) { return keys.filter(function (k) { return !s[k]; }).length; }
 
   var steps = [
     {
       k: "healthy path",
       story: "State streams from Region 1 to every connected SDK — changes typically land worldwide in under 200 ms, and every decision evaluates locally, in-process.",
-      down: [], azDown: false, serving: "east", pipesCut: [], foHot: false, defaultsHot: false,
+      state: st([]),
       next: "Take an availability zone down"
     },
     {
       k: "failure 1 of 5 — an availability zone",
       story: "AZ-a fails. The other zones absorb the load inside Region 1. Nothing changes for your app — you’d never know.",
-      down: [], azDown: true, serving: "east", pipesCut: [], foHot: false, defaultsHot: false,
+      state: st(["a"]),
       next: "Take all of Region 1 down"
     },
     {
       k: "failure 2 of 5 — the primary region",
       story: "Region 1 goes dark. Region 2 takes over automatically — same state, same stream. A cloud region’s bad day never becomes your incident.",
-      down: ["east"], azDown: true, serving: "west", pipesCut: [], foHot: true, defaultsHot: false,
+      state: st(["a", "east"]),
       next: "Take Region 2 down too"
     },
     {
       k: "failure 3 of 5 — the whole cloud",
       story: "Both regions are unreachable. Your Relay Proxy — inside your own network — keeps serving the latest state it received. Delivery never left your walls.",
-      down: ["east", "west"], azDown: true, serving: "relay", pipesCut: ["p3"], foHot: false, defaultsHot: false,
+      state: st(["a", "east", "west"]),
       next: "Take the Relay Proxy down"
     },
     {
       k: "failure 4 of 5 — the proxy",
       story: "The proxy is down too. Running SDKs keep evaluating from their local cache — no network required, no errors served.",
-      down: ["east", "west", "relay"], azDown: true, serving: "cache", pipesCut: ["p2", "p3"], foHot: false, defaultsHot: false,
+      state: st(["a", "east", "west", "relay"]),
       next: "Restart the app with nothing reachable"
     },
     {
       k: "failure 5 of 5 — restart, cold and cut off",
       story: "The app restarts: cache cleared, nothing reachable. Code-level defaults answer instantly. LaunchDarkly is never the reason your app can’t start and serve.",
-      down: ["east", "west", "relay", "cache"], azDown: true, serving: "sdk", pipesCut: ["p1", "p2", "p3"], foHot: false, defaultsHot: true,
+      state: st(["a", "east", "west", "relay", "cache"]),
       next: "Restore everything"
     }
   ];
 
-  var i = 0;
+  var state = st([]);
+  var i = 0; // index into steps when the state matches one, else -1
+
+  // Everything shown follows from the layer states. SDKs pointed at a Relay
+  // Proxy don't go around it, so with the proxy down they serve from cache.
+  function derive(s) {
+    var eastUp = s.east && azs.some(function (z) { return s[z]; });
+    var ldUp = eastUp || s.west;
+    var serving = !s.relay ? (s.cache ? "cache" : "sdk") :
+      eastUp ? "east" : s.west ? "west" : "relay";
+    return {
+      eastUp: eastUp,
+      ldUp: ldUp,
+      serving: serving,
+      cut: { p3: !ldUp || !s.relay, p2: !s.relay, p1: serving === "sdk" },
+      foHot: !eastUp && s.west
+    };
+  }
+
+  function customStory(s, d) {
+    var azDown = azs.filter(function (z) { return !s[z]; }).map(function (z) { return "AZ-" + z; });
+    var tail = !s.cache && d.serving !== "sdk" ? " The cache was cleared, so SDKs refill it as they start." : "";
+    switch (d.serving) {
+      case "east":
+        if (!azDown.length) return steps[0].story + tail;
+        if (azDown.length === 2) return azDown.join(" and ") + " are down. The last zone carries Region 1 on its own. Nothing changes for your app." + tail;
+        return azDown[0] + " is down. The other zones absorb the load inside Region 1. Nothing changes for your app." + tail;
+      case "west":
+        return (s.east ? "Every zone in Region 1 is down, so the region goes dark." : "Region 1 goes dark.") +
+          " Region 2 takes over automatically — same state, same stream." + tail;
+      case "relay":
+        return steps[3].story;
+      case "cache":
+        if (d.ldUp) return "The Relay Proxy is down. SDKs pointed at it keep evaluating from their local cache — no errors served — and pick up changes again when it’s back.";
+        return "LaunchDarkly is unreachable and the Relay Proxy is down. Running SDKs keep evaluating from their local cache — no network required, no errors served.";
+      default:
+        if (d.ldUp) return "The Relay Proxy is down and the app restarts with an empty cache. Code-level defaults answer instantly until the proxy is back.";
+        return steps[5].story;
+    }
+  }
+
+  // From a custom state, "next" goes to the first walkthrough step that breaks
+  // everything already broken, plus more.
+  function nextStep(s) {
+    for (var j = 1; j < steps.length; j++) {
+      var t = eff(steps[j].state), c = eff(s);
+      if (!same(t, c) && keys.every(function (k) { return c[k] || !t[k]; })) return j;
+    }
+    return 0;
+  }
 
   function render() {
-    var s = steps[i];
+    var d = derive(state);
     Object.keys(cards).forEach(function (k) {
       var el = cards[k];
-      el.classList.toggle("down", s.down.indexOf(k) > -1);
-      el.classList.toggle("serving", s.serving === k);
+      var down = k === "east" ? !d.eastUp : k !== "sdk" && !state[k];
+      el.classList.toggle("down", down);
+      el.classList.toggle("serving", d.serving === k);
       el.querySelector(".slabel").textContent =
-        s.down.indexOf(k) > -1 ? "unreachable" : (s.serving === k ? "serving" : "healthy");
+        down ? (k !== "cache" ? "unreachable" : d.serving === "sdk" ? "cleared" : "cleared, refilling") :
+        (d.serving === k ? "serving" : "healthy");
+      var tog = el.querySelector(".tog");
+      if (tog) tog.setAttribute("aria-checked", state[k] ? "true" : "false");
     });
-    ["az-a"].forEach(function (id) { $(id).classList.toggle("down", s.azDown); });
-    Object.keys(pipes).forEach(function (k) {
-      pipes[k].classList.toggle("cut", s.pipesCut.indexOf(k) > -1);
+    azs.forEach(function (z) {
+      $("az-" + z).classList.toggle("down", !state[z]);
+      $("az-" + z).setAttribute("aria-checked", state[z] ? "true" : "false");
+      $("az-" + z).setAttribute("aria-disabled", state.east ? "false" : "true");
     });
-    $("fo").classList.toggle("hot", s.foHot);
-    $("chip-defaults").classList.toggle("hot", s.defaultsHot);
-    $("stepk").textContent = s.k;
-    $("story").textContent = s.story;
-    $("next").textContent = s.next;
-    $("reset").hidden = i === 0;
-    for (var n = 0; n < steps.length; n++) { $("l" + n).classList.toggle("on", n <= i); }
+    Object.keys(pipes).forEach(function (k) { pipes[k].classList.toggle("cut", d.cut[k]); });
+    $("fo").classList.toggle("hot", d.foHot);
+    $("chip-defaults").classList.toggle("hot", d.serving === "sdk");
+
+    var n = offCount(state);
+    if (i > -1) {
+      $("stepk").textContent = steps[i].k;
+      $("story").textContent = steps[i].story;
+      $("next").textContent = steps[i].next;
+    } else {
+      var j = nextStep(state);
+      $("stepk").textContent = "your scenario — " + n + (n === 1 ? " layer" : " layers") + " off";
+      $("story").textContent = customStory(state, d);
+      $("next").textContent = "Break the next thing";
+    }
+    $("next").hidden = i < 0 && !j;
+    $("reset").hidden = n === 0;
+    for (var m = 0; m < steps.length; m++) { $("l" + m).classList.toggle("on", i > -1 && m <= i); }
     var pill = $("apppill");
     pill.classList.remove("pulse");
     void pill.offsetWidth;
     pill.classList.add("pulse");
   }
 
-  $("next").addEventListener("click", function () {
-    i = (i + 1) % steps.length;
-    render();
+  function go(j) { i = j; state = st([]); keys.forEach(function (k) { state[k] = steps[j].state[k]; }); render(); }
+
+  function matchStep(s) {
+    for (var j = 0; j < steps.length; j++) { if (same(steps[j].state, s)) return j; }
+    return -1;
+  }
+
+  Array.prototype.forEach.call(document.querySelectorAll("[data-layer]"), function (el) {
+    el.addEventListener("click", function () {
+      var k = el.getAttribute("data-layer");
+      if (el.getAttribute("aria-disabled") === "true") return;
+      state[k] = !state[k];
+      i = matchStep(state);
+      render();
+    });
   });
-  $("reset").addEventListener("click", function () { i = 0; render(); });
+  $("next").addEventListener("click", function () {
+    go(i > -1 ? (i + 1) % steps.length : nextStep(state));
+  });
+  $("reset").addEventListener("click", function () { go(0); });
   render();
 })();
 </script>
