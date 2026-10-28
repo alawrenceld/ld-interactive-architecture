@@ -1,0 +1,427 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>What the architecture does for you — LaunchDarkly</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #F8F8F8;
+    --panel: #FFFFFF;
+    --zone: #FDFDFE;
+    --border: #E4E4E9;
+    --border-strong: #CFCFD8;
+    --ink: #191919;
+    --muted: #5E5E68;
+    --blue: #405BFF;
+    --blue-press: #2A3BA6;
+    --blue-ghost: rgba(64, 91, 255, .08);
+    --lime: #DDFF46;
+    --lime-edge: #B9D82A;
+    --down: #A2A2AC;
+    --shadow-sm: 0 1px 2px rgba(25,25,25,.06);
+    --shadow-md: 0 2px 4px rgba(25,25,25,.05), 0 12px 28px rgba(25,25,25,.08);
+    --focus: 0 0 0 2px rgba(64,91,255,.28);
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #191919;
+      --panel: #212124;
+      --zone: #1E1E21;
+      --border: rgba(255,255,255,.13);
+      --border-strong: rgba(255,255,255,.24);
+      --ink: #F8F8F8;
+      --muted: #A8A8B2;
+      --blue: #5E75FF;
+      --blue-press: #8193FF;
+      --blue-ghost: rgba(94,117,255,.14);
+      --lime-edge: #DDFF46;
+      --down: #6B6B74;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+      --shadow-md: 0 2px 4px rgba(0,0,0,.3), 0 12px 28px rgba(0,0,0,.45);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #191919;
+    --panel: #212124;
+    --zone: #1E1E21;
+    --border: rgba(255,255,255,.13);
+    --border-strong: rgba(255,255,255,.24);
+    --ink: #F8F8F8;
+    --muted: #A8A8B2;
+    --blue: #5E75FF;
+    --blue-press: #8193FF;
+    --blue-ghost: rgba(94,117,255,.14);
+    --lime-edge: #DDFF46;
+    --down: #6B6B74;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+    --shadow-md: 0 2px 4px rgba(0,0,0,.3), 0 12px 28px rgba(0,0,0,.45);
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  *, *::before, *::after { box-sizing: inherit; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 400 16px/1.55 "Inter", "Söhne", system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+  .section {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: clamp(56px, 9vw, 120px) clamp(20px, 4vw, 48px);
+  }
+
+  .lede { max-width: 780px; margin-bottom: clamp(28px, 4vw, 44px); }
+  h1 {
+    font-family: "Sora", "Inter", sans-serif;
+    font-weight: 700;
+    font-size: clamp(30px, 4.6vw, 52px);
+    line-height: 1.04;
+    letter-spacing: -0.025em;
+    margin: 0 0 18px;
+  }
+  .lede p { color: var(--muted); font-size: clamp(16px, 1.6vw, 19px); margin: 0; max-width: 640px; }
+
+  /* ---------- benefit tabs ---------- */
+  .tabs { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: clamp(24px, 3.5vw, 36px); }
+  .tab {
+    font: 600 14.5px/1 "Inter", sans-serif;
+    color: var(--ink);
+    background: var(--panel);
+    border: 1px solid var(--border-strong);
+    border-radius: 999px;
+    padding: 12px 20px;
+    cursor: pointer;
+    transition: background .2s cubic-bezier(0.2,0,0,1), color .2s cubic-bezier(0.2,0,0,1),
+                border-color .2s cubic-bezier(0.2,0,0,1), transform .1s cubic-bezier(0.2,0,0,1);
+  }
+  .tab:hover { background: var(--blue-ghost); }
+  .tab:active { transform: scale(.98); }
+  .tab:focus-visible { outline: none; box-shadow: var(--focus); }
+  .tab[aria-selected="true"] { background: var(--blue); border-color: var(--blue); color: #fff; }
+
+  /* ---------- architecture ---------- */
+  .arch { display: flex; align-items: stretch; }
+  .zone {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--zone);
+    padding: 16px;
+    display: flex;
+    flex-direction: column;
+  }
+  .zone .zlabel { font-size: 13px; font-weight: 600; color: var(--muted); margin: 2px 2px 4px; }
+  .zone .zsub { font-size: 12px; color: var(--muted); margin: 0 2px 12px; }
+
+  .card {
+    position: relative;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    box-shadow: var(--shadow-sm);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+    transition: opacity .2s cubic-bezier(0.2,0,0,1), box-shadow .2s cubic-bezier(0.2,0,0,1),
+                border-color .2s cubic-bezier(0.2,0,0,1), transform .2s cubic-bezier(0.2,0,0,1);
+  }
+  .card h3 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+  .card .role { font-size: 13px; color: var(--muted); margin: 0; }
+  .card.hot {
+    border-color: var(--lime-edge);
+    box-shadow: 0 0 0 2px var(--lime-edge), var(--shadow-md);
+    transform: translateY(-2px);
+  }
+  .card.dim { opacity: .38; box-shadow: none; }
+
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip {
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--blue-ghost);
+    border-radius: 6px;
+    padding: 3px 8px;
+    transition: background .2s cubic-bezier(0.2,0,0,1), color .2s cubic-bezier(0.2,0,0,1);
+  }
+  .chip.hot { background: var(--lime); color: #191919; font-weight: 600; }
+
+  .c-platform { flex: 0 1 220px; align-self: center; }
+  .zone-net { flex: 1 1 0; gap: 14px; }
+  .zone-net .card { flex: 1 1 0; }
+  .zone-apps { flex: 1.15 1 0; gap: 14px; }
+  .zone-apps .card { flex: 1 1 auto; }
+  .card-relay { padding: 12px 18px; flex: 0 0 auto; }
+  .card-relay h3 { font-size: 14px; }
+
+  /* ---------- pipes ---------- */
+  .pipes { flex: 0 0 clamp(28px, 4vw, 56px); display: flex; flex-direction: column; align-self: stretch; }
+  .pipes.single { justify-content: center; }
+  .pipe { flex: 1 1 0; display: flex; align-items: center; position: relative; min-height: 28px; }
+  .pipes.single .pipe { flex: 0 0 auto; }
+  .pipe .line {
+    height: 2px;
+    flex: 1;
+    background: repeating-linear-gradient(to right, var(--blue) 0 6px, transparent 6px 14px);
+    animation: flow 1.1s linear infinite;
+    transition: opacity .2s cubic-bezier(0.2,0,0,1);
+  }
+  .pipe::after {
+    content: "";
+    width: 7px; height: 7px;
+    border-right: 2px solid var(--blue);
+    border-top: 2px solid var(--blue);
+    transform: rotate(45deg);
+    flex: 0 0 auto;
+    margin-left: -2px;
+  }
+  @keyframes flow { to { background-position: 14px 0; } }
+  .pipe.hot .line { background: repeating-linear-gradient(to right, var(--lime-edge) 0 8px, transparent 8px 14px); animation-duration: .5s; }
+  .pipe.hot::after { border-color: var(--lime-edge); }
+  .pipe.dim .line { opacity: .25; animation: none; }
+  .pipe.dim::after { opacity: .25; }
+  .pipe.cut .line { animation: none; background: repeating-linear-gradient(to right, var(--down) 0 4px, transparent 4px 12px); opacity: .4; }
+  .pipe.cut::after { border-color: var(--down); opacity: .4; }
+  .pipe .delta {
+    position: absolute;
+    top: -16px; left: 50%;
+    transform: translate(-50%, 4px);
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    background: var(--lime);
+    color: #191919;
+    font-weight: 600;
+    border-radius: 999px;
+    padding: 2px 8px;
+    opacity: 0;
+    transition: opacity .2s cubic-bezier(0.2,0,0,1), transform .2s cubic-bezier(0.2,0,0,1);
+    white-space: nowrap;
+  }
+  .pipe.show-delta .delta { opacity: 1; transform: translate(-50%, 0); }
+
+  /* ---------- console ---------- */
+  .console {
+    margin-top: clamp(24px, 3.5vw, 40px);
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+    gap: 10px 36px;
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--panel);
+    box-shadow: var(--shadow-sm);
+    padding: clamp(20px, 3vw, 30px);
+  }
+  .readout { min-width: 210px; }
+  .readout .num {
+    font-family: "Sora", sans-serif;
+    font-weight: 700;
+    font-size: clamp(44px, 6vw, 68px);
+    line-height: 1;
+    letter-spacing: -0.03em;
+    display: block;
+    transition: opacity .2s cubic-bezier(0.2,0,0,1), transform .2s cubic-bezier(0.2,0,0,1);
+  }
+  .readout .num.swap { opacity: 0; transform: translateY(8px); }
+  .readout .rlabel {
+    display: block;
+    margin-top: 8px;
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12px;
+    color: var(--muted);
+  }
+  .narration { margin: 0; font-size: clamp(15px, 1.5vw, 17px); min-height: 4.6em; }
+  .footnote { grid-column: 1 / -1; margin: 4px 0 0; font-size: 12.5px; color: var(--muted); }
+
+  @media (max-width: 900px) {
+    .arch { flex-direction: column; }
+    .c-platform { align-self: stretch; flex: 0 0 auto; }
+    .pipes { flex: 0 0 30px; flex-direction: row; justify-content: center; }
+    .pipe { flex: 0 0 2px; min-height: 0; flex-direction: column; justify-content: center; margin: 0 22px; }
+    .pipe .line { width: 2px; height: 100%; flex: 1;
+      background: repeating-linear-gradient(to bottom, var(--blue) 0 6px, transparent 6px 14px);
+      animation-name: flowv; }
+    @keyframes flowv { to { background-position: 0 14px; } }
+    .pipe.hot .line { background: repeating-linear-gradient(to bottom, var(--lime-edge) 0 8px, transparent 8px 14px); }
+    .pipe.cut .line { background: repeating-linear-gradient(to bottom, var(--down) 0 4px, transparent 4px 12px); }
+    .pipe::after { transform: rotate(135deg); margin: -2px 0 0; }
+    .pipe .delta { top: 50%; left: auto; right: -8px; transform: translate(100%, -50%); }
+    .pipe.show-delta .delta { transform: translate(100%, -50%); }
+    .console { grid-template-columns: 1fr; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pipe .line { animation: none !important; }
+    * { transition-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body>
+<main class="section">
+  <div class="lede">
+    <h1>The architecture is the advantage.</h1>
+    <p>Ten years of delivery infrastructure, doing four jobs your team would otherwise build and operate itself. Pick one — the diagram shows how it happens.</p>
+  </div>
+
+  <div class="tabs" role="tablist" aria-label="Architecture benefits">
+    <button class="tab" role="tab" id="t-start" aria-selected="true">Fast start</button>
+    <button class="tab" role="tab" id="t-changes" aria-selected="false">Fast changes</button>
+    <button class="tab" role="tab" id="t-failover" aria-selected="false">Failover built in</button>
+    <button class="tab" role="tab" id="t-secure" aria-selected="false">Private by design</button>
+  </div>
+
+  <div class="arch" aria-label="LaunchDarkly delivery architecture">
+    <article class="card c-platform" id="n-platform">
+      <h3>LaunchDarkly</h3>
+      <p class="role">Targeting, releases, automation — a change starts here</p>
+    </article>
+
+    <div class="pipes single"><div class="pipe" id="pp"><div class="line"></div></div></div>
+
+    <section class="zone zone-net" aria-label="Delivery network">
+      <div>
+        <div class="zlabel">[NETWORK NAME]</div>
+        <p class="zsub">LaunchDarkly’s global delivery network</p>
+      </div>
+      <article class="card" id="n-cdn">
+        <h3>Global CDN</h3>
+        <p class="role">100+ points of presence — serves complete, ready-to-run state instantly</p>
+      </article>
+      <article class="card" id="n-stream">
+        <h3>Streaming service</h3>
+        <p class="role">Multi-region — pushes only what changed, the moment it changes</p>
+      </article>
+    </section>
+
+    <div class="pipes">
+      <div class="pipe" id="pc"><div class="line"></div></div>
+      <div class="pipe" id="ps"><span class="delta">Δ 138 bytes</span><div class="line"></div></div>
+    </div>
+
+    <section class="zone zone-apps" aria-label="Your cloud and applications">
+      <div>
+        <div class="zlabel">Your cloud + applications</div>
+        <p class="zsub">Where every decision is actually made</p>
+      </div>
+      <article class="card" id="n-server">
+        <h3>Server SDKs</h3>
+        <p class="role">Evaluate in-process for every context — microseconds, no network call in your request path</p>
+        <div class="chips">
+          <span class="chip" id="ch-mem">in-memory state</span>
+          <span class="chip" id="ch-def">code defaults</span>
+          <span class="chip" id="ch-home">user data stays home</span>
+        </div>
+      </article>
+      <article class="card" id="n-client">
+        <h3>Client devices</h3>
+        <p class="role">Browsers and mobile apps</p>
+        <div class="chips">
+          <span class="chip" id="ch-vals">evaluated values only — never your rules</span>
+        </div>
+      </article>
+      <article class="card card-relay" id="n-relay">
+        <h3>Relay Proxy — optional</h3>
+        <p class="role">In-network delivery and offline operation</p>
+      </article>
+    </section>
+  </div>
+
+  <div class="console">
+    <div class="readout">
+      <span class="num" id="num">~25 ms</span>
+      <span class="rlabel" id="rlabel">cold start to first evaluation</span>
+    </div>
+    <p class="narration" aria-live="polite" id="story">
+      SDKs cold-start from CDN-served state in about 25 ms, then switch to the live stream — picking up exactly where the fetch left off. Serverless cold starts, autoscaled containers, and first page loads never wait, and never miss a change made while booting.
+    </p>
+    <p class="footnote">Figures from LaunchDarkly’s architecture testing; see the full architecture page for how each is measured.</p>
+  </div>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var nodes = ["n-platform", "n-cdn", "n-stream", "n-server", "n-client", "n-relay"];
+  var pipesAll = ["pp", "pc", "ps"];
+  var chipsAll = ["ch-mem", "ch-def", "ch-home", "ch-vals"];
+  var tabs = ["t-start", "t-changes", "t-failover", "t-secure"];
+
+  var scenes = {
+    "t-start": {
+      hot: ["n-cdn", "n-server"],
+      dim: ["n-relay"],
+      pipes: { pp: "", pc: "hot", ps: "" },
+      chips: ["ch-mem"],
+      num: "~25 ms",
+      rlabel: "cold start to first evaluation",
+      story: "SDKs cold-start from CDN-served state in about 25 ms, then switch to the live stream — picking up exactly where the fetch left off. Serverless cold starts, autoscaled containers, and first page loads never wait, and never miss a change made while booting."
+    },
+    "t-changes": {
+      hot: ["n-platform", "n-stream", "n-server", "n-client"],
+      dim: ["n-cdn", "n-relay"],
+      pipes: { pp: "hot", pc: "dim", ps: "hot show-delta" },
+      chips: [],
+      num: "<200 ms",
+      rlabel: "a change reaches every SDK, worldwide",
+      story: "Flip a flag and the streaming service pushes only what changed — a delta of roughly 138 bytes, not a full re-download. Changes typically reach every connected SDK in streaming mode in under 200 ms, worldwide. Kill switches land everywhere at once."
+    },
+    "t-failover": {
+      hot: ["n-server", "n-relay"],
+      dim: ["n-platform", "n-cdn", "n-stream"],
+      pipes: { pp: "cut", pc: "cut", ps: "cut" },
+      chips: ["ch-mem", "ch-def"],
+      num: "0 errors",
+      rlabel: "served through a full outage test",
+      story: "A delivery interruption never becomes your outage. Running SDKs keep evaluating from in-memory state, an optional Relay Proxy keeps serving inside your network, and code-level defaults guarantee an answer — even on a cold start with nothing reachable."
+    },
+    "t-secure": {
+      hot: ["n-server", "n-client"],
+      dim: ["n-relay"],
+      pipes: { pp: "", pc: "", ps: "" },
+      chips: ["ch-vals", "ch-home"],
+      num: "0 rules",
+      rlabel: "ever shipped to an end-user device",
+      story: "End-user devices receive evaluated values only — open DevTools, and there are no targeting rules or segments to read. Your backend evaluates in-process, so user data never leaves your infrastructure to get a decision, and each SDK key is entitled to only the flags its service needs."
+    }
+  };
+
+  function setScene(tabId) {
+    var s = scenes[tabId];
+    tabs.forEach(function (t) { $(t).setAttribute("aria-selected", t === tabId ? "true" : "false"); });
+    nodes.forEach(function (n) {
+      var el = $(n);
+      el.classList.toggle("hot", s.hot.indexOf(n) > -1);
+      el.classList.toggle("dim", s.dim.indexOf(n) > -1);
+    });
+    pipesAll.forEach(function (p) {
+      var el = $(p);
+      el.className = "pipe" + (s.pipes[p] ? " " + s.pipes[p] : "");
+    });
+    chipsAll.forEach(function (c) { $(c).classList.toggle("hot", s.chips.indexOf(c) > -1); });
+    var num = $("num");
+    num.classList.add("swap");
+    window.setTimeout(function () {
+      num.textContent = s.num;
+      $("rlabel").textContent = s.rlabel;
+      $("story").textContent = s.story;
+      num.classList.remove("swap");
+    }, 160);
+  }
+
+  tabs.forEach(function (t) {
+    $(t).addEventListener("click", function () { setScene(t); });
+  });
+  setScene("t-start");
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,543 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Your app stays online — LaunchDarkly resilience architecture</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
+<style>
+  :root {
+    color-scheme: light;
+    --bg: #F8F8F8;
+    --panel: #FFFFFF;
+    --zone: #FDFDFE;
+    --border: #E4E4E9;
+    --border-strong: #CFCFD8;
+    --ink: #191919;
+    --muted: #5E5E68;
+    --blue: #405BFF;
+    --blue-press: #2A3BA6;
+    --blue-ghost: rgba(64, 91, 255, .08);
+    --lime: #DDFF46;
+    --lime-edge: #B9D82A;
+    --warn: #FF9D29;
+    --down: #A2A2AC;
+    --shadow-sm: 0 1px 2px rgba(25,25,25,.06);
+    --shadow-md: 0 2px 4px rgba(25,25,25,.05), 0 12px 28px rgba(25,25,25,.08);
+    --focus: 0 0 0 2px rgba(64,91,255,.28);
+    box-sizing: border-box;
+    padding-top: env(safe-area-inset-top, 0px);
+    padding-bottom: env(safe-area-inset-bottom, 0px);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      color-scheme: dark;
+      --bg: #191919;
+      --panel: #212124;
+      --zone: #1E1E21;
+      --border: rgba(255,255,255,.13);
+      --border-strong: rgba(255,255,255,.24);
+      --ink: #F8F8F8;
+      --muted: #A8A8B2;
+      --blue: #5E75FF;
+      --blue-press: #8193FF;
+      --blue-ghost: rgba(94,117,255,.14);
+      --lime-edge: #DDFF46;
+      --down: #6B6B74;
+      --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+      --shadow-md: 0 2px 4px rgba(0,0,0,.3), 0 12px 28px rgba(0,0,0,.45);
+    }
+  }
+  :root[data-theme="dark"] {
+    color-scheme: dark;
+    --bg: #191919;
+    --panel: #212124;
+    --zone: #1E1E21;
+    --border: rgba(255,255,255,.13);
+    --border-strong: rgba(255,255,255,.24);
+    --ink: #F8F8F8;
+    --muted: #A8A8B2;
+    --blue: #5E75FF;
+    --blue-press: #8193FF;
+    --blue-ghost: rgba(94,117,255,.14);
+    --lime-edge: #DDFF46;
+    --down: #6B6B74;
+    --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
+    --shadow-md: 0 2px 4px rgba(0,0,0,.3), 0 12px 28px rgba(0,0,0,.45);
+  }
+  html { scroll-padding-top: env(safe-area-inset-top, 0px); }
+  *, *::before, *::after { box-sizing: inherit; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--ink);
+    font: 400 16px/1.55 "Inter", "Söhne", system-ui, -apple-system, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .section {
+    max-width: 1240px;
+    margin: 0 auto;
+    padding: clamp(56px, 9vw, 120px) clamp(20px, 4vw, 48px);
+  }
+
+  /* ---------- heading ---------- */
+  .lede { max-width: 760px; margin-bottom: clamp(32px, 5vw, 56px); }
+  h1 {
+    font-family: "Sora", "Inter", sans-serif;
+    font-weight: 700;
+    font-size: clamp(30px, 4.6vw, 52px);
+    line-height: 1.04;
+    letter-spacing: -0.025em;
+    margin: 0 0 18px;
+  }
+  .lede p { color: var(--muted); font-size: clamp(16px, 1.6vw, 19px); margin: 0; max-width: 620px; }
+  .lede strong { color: var(--ink); font-weight: 600; }
+
+  /* ---------- architecture ---------- */
+  .arch {
+    display: flex;
+    align-items: stretch;
+    gap: 0;
+  }
+  .zone {
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--zone);
+    padding: 16px;
+    position: relative;
+  }
+  .zone > .zlabel {
+    display: block;
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--muted);
+    letter-spacing: .01em;
+    margin: 2px 2px 12px;
+  }
+  .zone-infra { flex: 1 1 auto; display: flex; align-items: stretch; }
+  .zone-infra > .inner { display: flex; align-items: stretch; flex: 1 1 auto; flex-direction: column; }
+  .infra-row { display: flex; align-items: stretch; flex: 1 1 auto; }
+  .zone-app { flex: 1 1 auto; display: flex; flex-direction: column; }
+  .zone-app .cards { display: flex; align-items: stretch; flex: 1 1 auto; }
+  .zone-ld { width: 300px; flex: 0 0 auto; display: flex; flex-direction: column; }
+
+  .apppill {
+    display: inline-flex;
+    align-items: center;
+    gap: 10px;
+    align-self: flex-start;
+    margin: 0 2px 12px;
+    padding: 6px 14px 6px 7px;
+    border-radius: 999px;
+    background: var(--lime);
+    color: #191919;
+    font-size: 13px;
+    font-weight: 600;
+    box-shadow: var(--shadow-sm);
+  }
+  .apppill .knob {
+    width: 18px; height: 18px;
+    border-radius: 50%;
+    background: #191919;
+    position: relative;
+  }
+  .apppill .knob::after {
+    content: "";
+    position: absolute;
+    inset: 6px;
+    border-radius: 50%;
+    background: var(--lime);
+  }
+  .apppill.pulse { animation: pillpulse .5s cubic-bezier(0.2, 0, 0, 1); }
+  @keyframes pillpulse { 50% { transform: scale(1.04); } }
+
+  /* ---------- cards ---------- */
+  .card {
+    position: relative;
+    flex: 1 1 0;
+    min-width: 0;
+    background: var(--panel);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 18px;
+    box-shadow: var(--shadow-sm);
+    transition: opacity .2s cubic-bezier(0.2,0,0,1), box-shadow .2s cubic-bezier(0.2,0,0,1),
+                border-color .2s cubic-bezier(0.2,0,0,1), transform .2s cubic-bezier(0.2,0,0,1);
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+  }
+  .card h3 { margin: 0; font-size: 16px; font-weight: 600; letter-spacing: -0.01em; }
+  .card .role { font-size: 13px; color: var(--muted); margin: 0; }
+  .card .status {
+    margin-top: auto;
+    padding-top: 10px;
+    display: flex;
+    align-items: center;
+    gap: 7px;
+    font-family: "JetBrains Mono", "Söhne Mono", monospace;
+    font-size: 11.5px;
+    color: var(--muted);
+  }
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); flex: 0 0 auto;
+         transition: background .2s cubic-bezier(0.2,0,0,1); }
+
+  .card.serving {
+    border-color: var(--lime-edge);
+    box-shadow: 0 0 0 2px var(--lime-edge), var(--shadow-md);
+    transform: translateY(-2px);
+  }
+  .card.serving .dot { background: var(--lime-edge); }
+  .badge {
+    position: absolute;
+    top: -11px;
+    right: 12px;
+    background: var(--lime);
+    color: #191919;
+    font-size: 11.5px;
+    font-weight: 600;
+    padding: 3px 10px;
+    border-radius: 999px;
+    opacity: 0;
+    transform: translateY(4px);
+    transition: opacity .2s cubic-bezier(0.2,0,0,1), transform .2s cubic-bezier(0.2,0,0,1);
+    pointer-events: none;
+  }
+  .card.serving .badge { opacity: 1; transform: none; }
+
+  .card.down { opacity: .42; border-style: dashed; box-shadow: none; }
+  .card.down .dot { background: var(--warn); }
+
+  .azrow { display: flex; gap: 6px; flex-wrap: wrap; }
+  .az {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 11px;
+    color: var(--muted);
+    border: 1px solid var(--border);
+    border-radius: 999px;
+    padding: 2px 9px;
+    transition: opacity .2s cubic-bezier(0.2,0,0,1);
+  }
+  .az.down { border-style: dashed; border-color: #E5484D; color: #E5484D; text-decoration: line-through; }
+
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; }
+  .chip {
+    font-size: 12px;
+    color: var(--muted);
+    background: var(--blue-ghost);
+    border-radius: 6px;
+    padding: 3px 8px;
+    transition: background .2s cubic-bezier(0.2,0,0,1), color .2s cubic-bezier(0.2,0,0,1);
+  }
+  .chip.hot { background: var(--lime); color: #191919; font-weight: 600; }
+
+  /* ---------- pipes ---------- */
+  .pipe {
+    flex: 0 0 clamp(26px, 3.4vw, 52px);
+    align-self: stretch;
+    display: flex;
+    align-items: center;
+    position: relative;
+  }
+  .pipe .line {
+    height: 2px;
+    flex: 1;
+    background: repeating-linear-gradient(to left, var(--blue) 0 6px, transparent 6px 14px);
+    animation: flow 0.9s linear infinite;
+  }
+  .pipe::before {
+    content: "";
+    width: 7px; height: 7px;
+    border-left: 2px solid var(--blue);
+    border-bottom: 2px solid var(--blue);
+    transform: rotate(45deg);
+    flex: 0 0 auto;
+    margin-right: -2px;
+  }
+  @keyframes flow { to { background-position: -14px 0; } }
+  .pipe.cut .line { animation: none; background: repeating-linear-gradient(to left, var(--down) 0 4px, transparent 4px 12px); opacity: .45; }
+  .pipe.cut::before { border-color: var(--down); opacity: .45; }
+
+  /* failover link inside LD zone */
+  .failover {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    padding: 6px 4px 6px 28px;
+    position: relative;
+    min-height: 34px;
+  }
+  .failover::before {
+    content: "";
+    position: absolute;
+    left: 14px; top: 2px; bottom: 2px;
+    border-left: 2px dashed var(--border-strong);
+    transition: border-color .2s cubic-bezier(0.2,0,0,1);
+  }
+  .failover span { font-family: "JetBrains Mono", monospace; font-size: 11px; color: var(--muted); }
+  .failover.hot::before { border-color: var(--lime-edge); }
+  .failover.hot span { color: var(--ink); }
+
+  /* ---------- controls ---------- */
+  .console {
+    margin-top: clamp(28px, 4vw, 44px);
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    gap: 20px 32px;
+    align-items: center;
+    border: 1px solid var(--border);
+    border-radius: 16px;
+    background: var(--panel);
+    box-shadow: var(--shadow-sm);
+    padding: clamp(18px, 3vw, 28px);
+  }
+  .narration { min-height: 3.2em; margin: 0; font-size: clamp(15px, 1.5vw, 17px); }
+  .narration .step-k {
+    font-family: "JetBrains Mono", monospace;
+    font-size: 12px;
+    color: var(--muted);
+    display: block;
+    margin-bottom: 4px;
+  }
+  .controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+  button {
+    font: 600 14.5px/1 "Inter", sans-serif;
+    border-radius: 6px;
+    padding: 12px 18px;
+    cursor: pointer;
+    border: 1px solid transparent;
+    transition: background .2s cubic-bezier(0.2,0,0,1), transform .1s cubic-bezier(0.2,0,0,1);
+  }
+  button:focus-visible { outline: none; box-shadow: var(--focus); }
+  button:active { transform: scale(.98); }
+  .btn-primary { background: var(--blue); color: #fff; }
+  .btn-primary:hover { background: var(--blue-press); }
+  :root[data-theme="dark"] .btn-primary, .btn-primary { color: #fff; }
+  .btn-ghost { background: transparent; color: var(--ink); border-color: var(--border-strong); }
+  .btn-ghost:hover { background: var(--blue-ghost); }
+
+  .ladder { display: flex; gap: 6px; grid-column: 1 / -1; }
+  .ladder i {
+    height: 4px; flex: 1; border-radius: 999px;
+    background: var(--border);
+    transition: background .2s cubic-bezier(0.2,0,0,1);
+  }
+  .ladder i.on { background: var(--blue); }
+
+  .legend {
+    margin-top: 18px;
+    display: flex;
+    gap: 22px;
+    flex-wrap: wrap;
+    font-size: 13px;
+    color: var(--muted);
+  }
+  .legend span { display: inline-flex; align-items: center; gap: 7px; }
+  .legend .k-serve { width: 10px; height: 10px; border-radius: 3px; background: var(--lime); border: 1px solid var(--lime-edge); }
+  .legend .k-ok { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); }
+  .legend .k-down { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); }
+
+  /* ---------- responsive ---------- */
+  @media (max-width: 900px) {
+    .arch { flex-direction: column; }
+    .zone-ld { width: auto; }
+    .zone-app .cards { flex-direction: column; }
+    .infra-row { flex-direction: column; }
+    .pipe { flex: 0 0 30px; align-self: center; width: 2px; flex-direction: column; justify-content: center; }
+    .pipe .line { width: 2px; height: 100%; flex: 1;
+      background: repeating-linear-gradient(to top, var(--blue) 0 6px, transparent 6px 14px);
+      animation-name: flowv; }
+    @keyframes flowv { to { background-position: 0 -14px; } }
+    .pipe::before { transform: rotate(135deg); margin: 0 0 -2px; }
+    .pipe.cut .line { background: repeating-linear-gradient(to top, var(--down) 0 4px, transparent 4px 12px); }
+    .arch { gap: 0; }
+    .zone-infra { order: 0; }
+    .pipe-main { order: 1; }
+    .zone-ld { order: 2; }
+    .console { grid-template-columns: 1fr; }
+    .controls { justify-content: flex-start; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .pipe .line { animation: none; }
+    .apppill.pulse { animation: none; }
+    * { transition-duration: .01ms !important; }
+  }
+</style>
+</head>
+<body>
+<main class="section">
+  <div class="lede">
+    <h1>Your app stays online, wherever connectivity breaks.</h1>
+    <p>If LaunchDarkly has a problem, <strong>you don’t</strong>. Every layer between our cloud and your code can answer when everything upstream is unreachable. Break things, in order, and watch your app keep serving.</p>
+  </div>
+
+  <div class="arch" aria-label="LaunchDarkly resilience architecture">
+    <section class="zone zone-infra" aria-label="Your infrastructure">
+      <div class="inner">
+        <span class="zlabel">Your infrastructure</span>
+        <div class="infra-row">
+          <section class="zone zone-app" aria-label="Your application">
+            <div class="apppill" id="apppill"><span class="knob"></span><span id="appstate">Your app: online, serving customers</span></div>
+            <div class="cards">
+              <article class="card" id="c-sdk">
+                <span class="badge">Serving now</span>
+                <h3>SDK</h3>
+                <p class="role">Evaluates every decision in-process</p>
+                <div class="chips">
+                  <span class="chip">local evaluation</span>
+                  <span class="chip" id="chip-defaults">code-level defaults</span>
+                </div>
+                <div class="status"><i class="dot"></i><span class="slabel">healthy</span></div>
+              </article>
+              <div class="pipe" id="p1"><div class="line"></div></div>
+              <article class="card" id="c-cache">
+                <span class="badge">Serving now</span>
+                <h3>Local cache</h3>
+                <p class="role">Last-known state, held by the running SDK</p>
+                <div class="status"><i class="dot"></i><span class="slabel">healthy</span></div>
+              </article>
+            </div>
+          </section>
+          <div class="pipe" id="p2"><div class="line"></div></div>
+          <article class="card" id="c-relay" style="flex:0 1 240px">
+            <span class="badge">Serving now</span>
+            <h3>Relay Proxy</h3>
+            <p class="role">Optional. Runs in your network with the latest LaunchDarkly state — serves even fully disconnected</p>
+            <div class="status"><i class="dot"></i><span class="slabel">healthy</span></div>
+          </article>
+        </div>
+      </div>
+    </section>
+
+    <div class="pipe pipe-main" id="p3"><div class="line"></div></div>
+
+    <section class="zone zone-ld" aria-label="LaunchDarkly cloud">
+      <span class="zlabel">LaunchDarkly</span>
+      <article class="card" id="c-east" style="flex:0 0 auto">
+        <span class="badge">Serving now</span>
+        <h3>Region 1</h3>
+        <p class="role">Primary region</p>
+        <div class="azrow">
+          <span class="az" id="az-a">AZ-a</span>
+          <span class="az" id="az-b">AZ-b</span>
+          <span class="az" id="az-c">AZ-c</span>
+        </div>
+        <div class="status"><i class="dot"></i><span class="slabel">healthy</span></div>
+      </article>
+      <div class="failover" id="fo"><span>automatic failover</span></div>
+      <article class="card" id="c-west" style="flex:0 0 auto">
+        <span class="badge">Serving now</span>
+        <h3>Region 2</h3>
+        <p class="role">Warm failover region</p>
+        <div class="status"><i class="dot"></i><span class="slabel">healthy</span></div>
+      </article>
+    </section>
+  </div>
+
+  <div class="console">
+    <div class="ladder" aria-hidden="true">
+      <i id="l0"></i><i id="l1"></i><i id="l2"></i><i id="l3"></i><i id="l4"></i><i id="l5"></i>
+    </div>
+    <p class="narration" aria-live="polite" id="narration">
+      <span class="step-k" id="stepk">healthy path</span>
+      <span id="story">State streams from Region 1 to every connected SDK — changes typically land worldwide in under 200 ms, and every decision evaluates locally, in-process.</span>
+    </p>
+    <div class="controls">
+      <button class="btn-ghost" id="reset" hidden>Restore everything</button>
+      <button class="btn-primary" id="next">Take an availability zone down</button>
+    </div>
+  </div>
+
+  <div class="legend">
+    <span><i class="k-serve"></i>serving your app</span>
+    <span><i class="k-ok"></i>healthy</span>
+    <span><i class="k-down"></i>unreachable</span>
+  </div>
+</main>
+
+<script>
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var cards = { east: $("c-east"), west: $("c-west"), relay: $("c-relay"), cache: $("c-cache"), sdk: $("c-sdk") };
+  var pipes = { p1: $("p1"), p2: $("p2"), p3: $("p3") };
+
+  var steps = [
+    {
+      k: "healthy path",
+      story: "State streams from Region 1 to every connected SDK — changes typically land worldwide in under 200 ms, and every decision evaluates locally, in-process.",
+      down: [], azDown: false, serving: "east", pipesCut: [], foHot: false, defaultsHot: false,
+      next: "Take an availability zone down"
+    },
+    {
+      k: "failure 1 of 5 — an availability zone",
+      story: "AZ-a fails. The other zones absorb the load inside Region 1. Nothing changes for your app — you’d never know.",
+      down: [], azDown: true, serving: "east", pipesCut: [], foHot: false, defaultsHot: false,
+      next: "Take all of Region 1 down"
+    },
+    {
+      k: "failure 2 of 5 — the primary region",
+      story: "Region 1 goes dark. Region 2 takes over automatically — same state, same stream. A cloud region’s bad day never becomes your incident.",
+      down: ["east"], azDown: true, serving: "west", pipesCut: [], foHot: true, defaultsHot: false,
+      next: "Take Region 2 down too"
+    },
+    {
+      k: "failure 3 of 5 — the whole cloud",
+      story: "Both regions are unreachable. Your Relay Proxy — inside your own network — keeps serving the latest state it received. Delivery never left your walls.",
+      down: ["east", "west"], azDown: true, serving: "relay", pipesCut: ["p3"], foHot: false, defaultsHot: false,
+      next: "Take the Relay Proxy down"
+    },
+    {
+      k: "failure 4 of 5 — the proxy",
+      story: "The proxy is down too. Running SDKs keep evaluating from their local cache — no network required, no errors served.",
+      down: ["east", "west", "relay"], azDown: true, serving: "cache", pipesCut: ["p2", "p3"], foHot: false, defaultsHot: false,
+      next: "Restart the app with nothing reachable"
+    },
+    {
+      k: "failure 5 of 5 — restart, cold and cut off",
+      story: "The app restarts: cache cleared, nothing reachable. Code-level defaults answer instantly. LaunchDarkly is never the reason your app can’t start and serve.",
+      down: ["east", "west", "relay", "cache"], azDown: true, serving: "sdk", pipesCut: ["p1", "p2", "p3"], foHot: false, defaultsHot: true,
+      next: "Restore everything"
+    }
+  ];
+
+  var i = 0;
+
+  function render() {
+    var s = steps[i];
+    Object.keys(cards).forEach(function (k) {
+      var el = cards[k];
+      el.classList.toggle("down", s.down.indexOf(k) > -1);
+      el.classList.toggle("serving", s.serving === k);
+      el.querySelector(".slabel").textContent =
+        s.down.indexOf(k) > -1 ? "unreachable" : (s.serving === k ? "serving" : "healthy");
+    });
+    ["az-a"].forEach(function (id) { $(id).classList.toggle("down", s.azDown); });
+    Object.keys(pipes).forEach(function (k) {
+      pipes[k].classList.toggle("cut", s.pipesCut.indexOf(k) > -1);
+    });
+    $("fo").classList.toggle("hot", s.foHot);
+    $("chip-defaults").classList.toggle("hot", s.defaultsHot);
+    $("stepk").textContent = s.k;
+    $("story").textContent = s.story;
+    $("next").textContent = s.next;
+    $("reset").hidden = i === 0;
+    for (var n = 0; n < steps.length; n++) { $("l" + n).classList.toggle("on", n <= i); }
+    var pill = $("apppill");
+    pill.classList.remove("pulse");
+    void pill.offsetWidth;
+    pill.classList.add("pulse");
+  }
+
+  $("next").addEventListener("click", function () {
+    i = (i + 1) % steps.length;
+    render();
+  });
+  $("reset").addEventListener("click", function () { i = 0; render(); });
+  render();
+})();
+</script>
+</body>
+</html>
