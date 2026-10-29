@@ -10,11 +10,28 @@ static server.
 
 ### ld-resilience-marketecture.html
 The resilience story as a clickable failure ladder. Layered marketecture —
-SDK + code defaults, local cache, Relay Proxy, LaunchDarkly cloud
-(Region 1 primary with AZ chips, Region 2 warm failover) — with a
-"break the next thing" stepper that walks six states: healthy, AZ down,
-Region 1 down, both regions down, Relay Proxy down, cold restart with
-nothing reachable. The app-status pill stays "online" through every step.
+SDK + code defaults, local cache, Relay Proxy, the LaunchDarkly CDN
+(polling), and LaunchDarkly itself (Region 1 primary with AZ chips, and
+Region 2 warm failover; streaming runs inside the regions). Streaming lines
+run from the regions straight to your apps, past the CDN. — with a
+"break the next thing" stepper that walks seven states: healthy, AZ down,
+Region 1 down, both regions down (streaming goes with them; the CDN keeps
+serving), CDN down, Relay Proxy down, cold restart with nothing reachable. The app-status pill stays "online" through every step.
+Every layer also has its own on/off switch: each availability zone, both
+regions, CDN polling, the browser cache, the Relay Proxy,
+and the backend and on-device caches. A mobile-client row below the
+backend connects straight to LaunchDarkly, with values saved on the
+device that survive restarts. A laptop beside it runs the browser SDK with a
+browser cache; its streaming and polling lines run straight behind the phone, drawn
+as an SVG overlay that redraws on resize.
+
+A second tab, "Starts fast", steps through a server-side SDK starting up: it
+boots on code defaults, fetches complete flag state from the nearest CDN edge,
+opens a stream that says which version it already has, catches up (usually
+just the changes since), and then receives each new change live. A cold/warm
+switch on the local cache shows the warm start: the SDK evaluates from the
+state saved on the last run until the CDN payload refreshes it. The Relay Proxy is left out of this view. Link to it directly
+with `#startup`.
 
 ### ld-architecture-value.html
 The architectural-value story as four benefit scenes. One delivery diagram
@@ -34,7 +51,8 @@ Fast start (~25 ms), Fast changes (<200 ms, 138-byte delta), Failover built in
 - Vanilla JS only; state machines live at the bottom of each file in the
   scenes/steps arrays — copy edits happen there and in the markup, nothing
   is generated.
-- Responsive: zones stack and pipes rotate vertical below ~900px.
+- Responsive: zones stack and pipes rotate vertical below ~1280px on the
+  resilience page and ~900px on the value page.
 
 ## Status / before production use
 
@@ -45,3 +63,6 @@ Fast start (~25 ms), Fast changes (<200 ms, 138-byte delta), Failover built in
   external publish. The reversal-speed figure is inferred, not measured —
   see the architecture page draft doc for the full clearance list.
 - Region names are intentionally generic (Region 1 / Region 2).
+- The resilience page also claims the CDN has 100+ points of presence, and
+  that it keeps serving the last state it received with both regions down.
+  Both need clearing before external publish.
