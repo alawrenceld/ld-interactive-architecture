@@ -22,6 +22,7 @@
     --lime-edge: #B9D82A;
     --warn: #FF9D29;
     --ok: #1FA463;
+    --bezel: #2A2A2E;
     --down: #A2A2AC;
     --shadow-sm: 0 1px 2px rgba(25,25,25,.06);
     --shadow-md: 0 2px 4px rgba(25,25,25,.05), 0 12px 28px rgba(25,25,25,.08);
@@ -45,6 +46,7 @@
       --blue-ghost: rgba(94,117,255,.14);
       --lime-edge: #DDFF46;
       --ok: #3DD68C;
+      --bezel: #55555E;
       --down: #6B6B74;
       --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
       --shadow-md: 0 2px 4px rgba(0,0,0,.3), 0 12px 28px rgba(0,0,0,.45);
@@ -64,6 +66,7 @@
     --blue-ghost: rgba(94,117,255,.14);
     --lime-edge: #DDFF46;
     --ok: #3DD68C;
+    --bezel: #55555E;
     --down: #6B6B74;
     --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
     --shadow-md: 0 2px 4px rgba(0,0,0,.3), 0 12px 28px rgba(0,0,0,.45);
@@ -128,7 +131,40 @@
   #p4 { grid-column: 2; grid-row: 3; }
   #p4s { grid-column: 2 / span 3; grid-row: 4; }
   .zone-mobile { grid-column: 1; grid-row: 3 / span 2; margin-top: 16px; display: flex; flex-direction: column; }
-  .zone-mobile .cards { display: flex; align-items: stretch; flex: 1 1 auto; }
+  .zone-mobile .cards { display: flex; flex-direction: column; flex: 1 1 auto; }
+
+  /* ---------- the mobile app, drawn as a phone ---------- */
+  .zone.zone-mobile {
+    justify-self: end;
+    width: 250px;
+    border: 6px solid var(--bezel);
+    border-radius: 40px;
+    padding: 10px 14px 12px;
+    box-shadow: var(--shadow-md);
+  }
+  .zone-mobile::before, .zone-mobile::after {
+    content: "";
+    display: block;
+    height: 8px;
+    border-radius: 999px;
+    background: var(--bezel);
+    margin: 0 auto 12px;
+  }
+  .zone-mobile::before { width: 72px; }
+  .zone-mobile::after { width: 90px; height: 4px; margin: 12px auto 0; }
+  .zone-mobile .apppill { align-self: center; }
+  .zone-mobile .card { flex: 0 0 auto; padding: 12px 14px; gap: 6px; }
+  .zone-mobile .card h3 { font-size: 14px; }
+  .zone-mobile .card .role { font-size: 12.5px; }
+  .zone-mobile .card .status { padding-top: 2px; }
+  /* cache below the SDK, so the link points up */
+  .zone-mobile .pipe { flex: 0 0 26px; align-self: center; width: 2px; flex-direction: column; justify-content: center; }
+  .zone-mobile .pipe .line { width: 2px; height: 100%;
+    background: repeating-linear-gradient(to top, var(--blue) 0 6px, transparent 6px 14px);
+    animation-name: flowup; }
+  @keyframes flowup { to { background-position: 0 -14px; } }
+  .zone-mobile .pipe::before { transform: rotate(135deg); margin: 0 0 -2px; }
+  .zone-mobile .pipe.cut .line { background: repeating-linear-gradient(to top, var(--down) 0 4px, transparent 4px 12px); }
   .ptag {
     position: absolute;
     left: 50%; top: calc(50% - 20px);
@@ -432,14 +468,14 @@
     .zone-cdn { grid-row: 3; }
     #p3 { grid-row: 4; }
     .zone-infra { grid-row: 5; }
-    .zone-mobile { grid-row: 6; margin-top: 16px; }
+    .zone.zone-mobile { grid-row: 6; margin-top: 16px; justify-self: center; }
     .zone-cdn { margin: 0; }
     /* one column has no room for a bypass, so its links stand for delivery as a whole */
     #p3s, #p4s { display: none; }
     /* one column can't draw the CDN-to-mobile link beside the backend one */
     #p4 { display: none; }
     /* state flows down: proxy above cache above SDK */
-    .infra-row, .zone-app .cards, .zone-mobile .cards { flex-direction: column-reverse; }
+    .infra-row, .zone-app .cards { flex-direction: column-reverse; }
     .pipe { flex: 0 0 30px; align-self: center; width: 2px; flex-direction: column-reverse; justify-content: center; }
     .arch > .pipe { height: 30px; justify-self: center; }
     .pipe .line { width: 2px; height: 100%; flex: 1;
@@ -554,25 +590,21 @@
     <div class="pipe pipe-mobile" id="p4"><div class="line"></div></div>
     <div class="pipe pipe-stream" id="p4s"><span class="ptag">streaming</span><div class="line"></div></div>
 
-    <section class="zone zone-mobile" aria-label="End-user devices">
-      <span class="zlabel">End-user devices</span>
-      <div class="apppill"><span class="knob"></span><span>Your mobile app: online, serving customers</span></div>
+    <section class="zone zone-mobile" aria-label="Mobile app on an end-user device">
+      <div class="apppill"><span class="knob"></span><span>Mobile app: online</span></div>
       <div class="cards">
         <article class="card" id="c-msdk">
           <span class="badge">Serving now</span>
           <div class="chead"><h3>Mobile SDK</h3><span class="fixed">always on</span></div>
-          <p class="role">Receives values already evaluated for this user — never your rules</p>
-          <div class="chips">
-            <span class="chip">evaluated values only</span>
-            <span class="chip" id="chip-mdefaults">code-level defaults</span>
-          </div>
+          <p class="role">Evaluated values only — never your rules</p>
+          <div class="chips"><span class="chip" id="chip-mdefaults">code-level defaults</span></div>
           <div class="status"><i class="dot"></i><span class="slabel">healthy</span></div>
         </article>
         <div class="pipe" id="p5"><div class="line"></div></div>
         <article class="card" id="c-mcache">
           <span class="badge">Serving now</span>
           <div class="chead"><h3>On-device cache</h3><button class="tog" role="switch" aria-checked="true" data-layer="mcache" aria-label="On-device cache"></button></div>
-          <p class="role">Last-known values, saved on the device — survives restarts</p>
+          <p class="role">Survives restarts</p>
           <div class="status"><i class="dot"></i><span class="slabel">healthy</span></div>
         </article>
       </div>
