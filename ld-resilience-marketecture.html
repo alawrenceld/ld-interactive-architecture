@@ -537,7 +537,7 @@
 
   <div class="console">
     <div class="ladder" aria-hidden="true">
-      <i id="l0"></i><i id="l1"></i><i id="l2"></i><i id="l3"></i><i id="l4"></i><i id="l5"></i>
+      <i id="l0"></i><i id="l1"></i><i id="l2"></i><i id="l3"></i><i id="l4"></i><i id="l5"></i><i id="l6"></i>
     </div>
     <p class="narration" aria-live="polite" id="narration">
       <span class="step-k" id="stepk">healthy path</span>
@@ -597,33 +597,39 @@
       next: "Take an availability zone down"
     },
     {
-      k: "failure 1 of 5 — an availability zone",
+      k: "failure 1 of 6 — an availability zone",
       story: "AZ-a fails. The other zones absorb the load inside Region 1. Nothing changes for your app — you’d never know.",
       state: st(["a"]),
+      next: "Take streaming down"
+    },
+    {
+      k: "failure 2 of 6 — streaming",
+      story: "Streaming goes down. SDKs keep serving the last state they received while they reconnect, and SDKs on LaunchDarkly’s newer data system fall back to polling through the CDN. Changes arrive on the next poll instead of the moment they’re made.",
+      state: st(["a", "stream"]),
       next: "Take all of Region 1 down"
     },
     {
-      k: "failure 2 of 5 — the primary region",
-      story: "Region 1 goes dark. Region 2 takes over automatically — same state, same stream. A cloud region’s bad day never becomes your incident.",
-      state: st(["a", "east"]),
+      k: "failure 3 of 6 — the primary region",
+      story: "Region 1 goes dark. Region 2 takes over automatically — same state, still delivered through the CDN. A cloud region’s bad day never becomes your incident.",
+      state: st(["a", "stream", "east"]),
       next: "Take Region 2 down too"
     },
     {
-      k: "failure 3 of 5 — the whole cloud",
+      k: "failure 4 of 6 — the whole cloud",
       story: "Both regions are unreachable. Your Relay Proxy — inside your own network — keeps serving the latest state it received. Delivery never left your walls.",
-      state: st(["a", "east", "west"]),
+      state: st(["a", "stream", "east", "west"]),
       next: "Take the Relay Proxy down"
     },
     {
-      k: "failure 4 of 5 — the proxy",
+      k: "failure 5 of 6 — the proxy",
       story: "The proxy is down too. Running SDKs keep evaluating from their local cache — no network required, no errors served.",
-      state: st(["a", "east", "west", "relay"]),
+      state: st(["a", "stream", "east", "west", "relay"]),
       next: "Restart the app with nothing reachable"
     },
     {
-      k: "failure 5 of 5 — restart, cold and cut off",
+      k: "failure 6 of 6 — restart, cold and cut off",
       story: "The app restarts: cache cleared, nothing reachable. Code-level defaults answer instantly. LaunchDarkly is never the reason your app can’t start and serve.",
-      state: st(["a", "east", "west", "relay", "cache"]),
+      state: st(["a", "stream", "east", "west", "relay", "cache"]),
       next: "Restore everything"
     }
   ];
@@ -689,7 +695,7 @@
       case "relay":
         base = d.originUp ?
           "Streaming and polling are both down, so nothing can reach LaunchDarkly. Your Relay Proxy — inside your own network — keeps serving the latest state it received." :
-          steps[3].story;
+          steps[4].story;
         return base + mobileNote(s, d);
       case "cache":
         base = d.ldUp ?
@@ -699,7 +705,7 @@
       default:
         base = d.ldUp ?
           "The Relay Proxy is down and the backend restarts with an empty cache. Code-level defaults answer instantly until the proxy is back." :
-          steps[5].story;
+          steps[6].story;
         return base + chanNote(s, d) + mobileNote(s, d);
     }
   }

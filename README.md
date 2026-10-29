@@ -12,7 +12,7 @@ static server.
 The resilience story as a clickable failure ladder. Layered marketecture —
 SDK + code defaults, local cache, Relay Proxy, LaunchDarkly cloud
 (Region 1 primary with AZ chips, Region 2 warm failover) — with a
-"break the next thing" stepper that walks six states: healthy, AZ down,
+"break the next thing" stepper that walks seven states: healthy, AZ down, streaming down,
 Region 1 down, both regions down, Relay Proxy down, cold restart with
 nothing reachable. The app-status pill stays "online" through every step.
 Every layer also has its own on/off switch: each availability zone, both
