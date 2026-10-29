@@ -816,7 +816,7 @@
       </article>
     </section>
 
-    <div class="pipe" id="s-porigin"><div class="line"></div></div>
+    <div class="pipe" id="s-porigin"><div class="line"></div><i class="pkt" id="s-korigin"></i></div>
 
     <section class="zone s-ld" aria-label="LaunchDarkly">
       <span class="zlabel">LaunchDarkly</span>
@@ -830,7 +830,7 @@
 
   <div class="console">
     <div class="ladder" aria-hidden="true">
-      <i id="s-l0"></i><i id="s-l1"></i><i id="s-l2"></i><i id="s-l3"></i><i id="s-l4"></i><i id="s-l5"></i>
+      <i id="s-l0"></i><i id="s-l1"></i><i id="s-l2"></i><i id="s-l3"></i><i id="s-l4"></i><i id="s-l5"></i><i id="s-l6"></i>
     </div>
     <p class="narration" aria-live="polite">
       <span class="step-k" id="s-stepk"></span>
@@ -1196,48 +1196,56 @@
 (function () {
   "use strict";
   var $ = function (id) { return document.getElementById(id); };
-  // pkt: which link carries a packet and which way ("right" = request, "left" = response)
+  // pkts: [link, direction] pairs ("right" = request, "left" = response, "loop" = repeating)
   var steps = [
     {
-      k: "app boots",
-      story: "Your app starts. Until the SDK has flag data, every evaluation returns the code-level default you passed in — never an error.",
-      data: "none yet", eval: "code defaults", conn: "none",
-      live: [], hot: [], chip: false, pkt: null, tpoll: "polling", tstream: "streaming",
-      next: "Fetch from the CDN"
+      k: "before startup",
+      story: "Your app isn’t running yet. LaunchDarkly’s CDN already holds complete flag state at the edge, ready for it.",
+      data: "none", eval: "nothing yet", conn: "none",
+      live: [], hot: [], chip: false, pkts: [], tpoll: "polling", tstream: "streaming",
+      next: "Start up"
     },
     {
-      k: "step 1 of 5 — fetch",
+      k: "step 1 of 6 — start up",
+      story: "Your app starts. Until the SDK has flag data, every evaluation returns the code-level default you passed in — never an error.",
+      data: "none yet", eval: "code defaults", conn: "none",
+      live: [], hot: ["s-sdk"], chip: false, pkts: [], tpoll: "polling", tstream: "streaming",
+      next: "Request from CDN"
+    },
+    {
+      k: "step 2 of 6 — request from CDN",
       story: "The SDK asks the nearest CDN edge for complete flag state. The request travels to the edge, not across the world.",
       data: "requesting…", eval: "code defaults", conn: "fetching from the CDN",
-      live: ["s-ppoll"], hot: ["s-cdncard"], chip: false, pkt: ["s-kpoll", "right"], tpoll: "request", tstream: "streaming",
+      live: ["s-ppoll"], hot: ["s-cdncard"], chip: false, pkts: [["s-kpoll", "right"]], tpoll: "request", tstream: "streaming",
       next: "Receive the payload"
     },
     {
-      k: "step 2 of 5 — ready",
+      k: "step 3 of 6 — ready",
       story: "The edge answers with complete, ready-to-run state in about 25 ms. The SDK is ready and evaluates every flag locally, in-process.",
       data: "complete · v41", eval: "local, in-process", conn: "fetched from the CDN",
-      live: ["s-ppoll"], hot: ["s-cdncard", "s-sdk"], chip: false, pkt: ["s-kpoll", "left"], tpoll: "full state", tstream: "streaming",
+      live: ["s-ppoll"], hot: ["s-cdncard", "s-sdk"], chip: false, pkts: [["s-kpoll", "left"]], tpoll: "full state", tstream: "streaming",
       next: "Open the stream"
     },
     {
-      k: "step 3 of 5 — connect",
+      k: "step 4 of 6 — connect",
       story: "The SDK opens a streaming connection to a LaunchDarkly region and says which version it already has.",
       data: "complete · v41", eval: "local, in-process", conn: "connecting…",
-      live: ["s-pstream"], hot: ["s-region"], chip: false, pkt: ["s-kstream", "right"], tpoll: "polling", tstream: "connect · have v41",
+      live: ["s-pstream"], hot: ["s-region"], chip: false, pkts: [["s-kstream", "right"]], tpoll: "polling", tstream: "connect · have v41",
       next: "Catch up"
     },
     {
-      k: "step 4 of 5 — catch up",
+      k: "step 5 of 6 — catch up",
       story: "The region catches the SDK up from v41, usually by sending just the changes since. Nothing made during startup is missed, even if the edge was a little behind.",
       data: "current · v42", eval: "local, in-process", conn: "streaming",
-      live: ["s-pstream"], hot: ["s-region", "s-sdk"], chip: true, pkt: ["s-kstream", "left"], tpoll: "polling", tstream: "changes since v41",
+      live: ["s-pstream"], hot: ["s-region", "s-sdk"], chip: true, pkts: [["s-kstream", "left"]], tpoll: "polling", tstream: "changes since v41",
       next: "Make a flag change"
     },
     {
-      k: "step 5 of 5 — live",
-      story: "From here, each flag change lands the moment it’s made, as a small update instead of a fresh download.",
+      k: "step 6 of 6 — a flag change",
+      story: "A flag changes. The region streams it to your app the moment it’s made, as a small update, and sends it to the CDN so the next SDK to start gets it too.",
       data: "live · v43", eval: "local, in-process", conn: "streaming",
-      live: ["s-pstream"], hot: ["s-sdk", "s-region"], chip: true, pkt: ["s-kstream", "loop"], tpoll: "polling", tstream: "Δ change · v43",
+      live: ["s-pstream"], hot: ["s-sdk", "s-cdncard", "s-region"], chip: true,
+      pkts: [["s-kstream", "loop"], ["s-korigin", "loop"]], tpoll: "polling", tstream: "Δ change · v43",
       next: "Start over"
     }
   ];
@@ -1250,10 +1258,10 @@
     links.forEach(function (id) { $(id).classList.toggle("idle", s.live.indexOf(id) < 0); });
     cards.forEach(function (id) { $(id).classList.toggle("serving", s.hot.indexOf(id) > -1); });
     $("s-chip").classList.toggle("hot", s.chip);
-    ["s-kpoll", "s-kstream"].forEach(function (id) {
-      var el = $(id);
+    ["s-kpoll", "s-kstream", "s-korigin"].forEach(function (id) {
+      var el = $(id), p = s.pkts.filter(function (x) { return x[0] === id; })[0];
       el.className = "pkt";
-      if (s.pkt && s.pkt[0] === id) { void el.offsetWidth; el.classList.add(s.pkt[1]); }
+      if (p) { void el.offsetWidth; el.classList.add(p[1]); }
     });
     $("s-tpoll").textContent = s.tpoll;
     $("s-tstream").textContent = s.tstream;
