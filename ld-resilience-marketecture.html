@@ -879,7 +879,7 @@
     }
     var yPoll = Math.min(lane(L.t + (L.b - L.t) * 0.35), C.b - 14);
     // below the CDN when there's room, so it visibly reaches LaunchDarkly
-    var yStream = lane(Math.max(yPoll + 24, C.b + 10));
+    var yStream = lane(Math.max(yPoll + 24, C.b + 25));
     function head(y) { return "M" + (L.r + 8) + " " + (y - 5) + " L" + (L.r + 2) + " " + y + " L" + (L.r + 8) + " " + (y + 5); }
     $("w-poll").setAttribute("d", "M" + C.l + " " + yPoll + " H" + (L.r + 2));
     $("w-poll-h").setAttribute("d", head(yPoll));
