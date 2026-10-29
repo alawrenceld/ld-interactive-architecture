@@ -560,19 +560,19 @@
   .ptab[aria-selected="true"] { background: var(--blue); border-color: var(--blue); color: #fff; }
 
   /* ---------- startup tab ---------- */
-  /* Row 1 is the streaming lane, straight from LaunchDarkly past the CDN;
-     row 2 carries polling between your app and the CDN. */
+  /* Row 1 carries polling between your app and the CDN, which sits at the
+     top; row 2 is the streaming lane, straight from LaunchDarkly under it. */
   .sarch {
     --pipe-w: clamp(56px, 6vw, 96px);
     display: grid;
     grid-template-columns: minmax(0, 1fr) var(--pipe-w) 220px var(--pipe-w) 260px;
-    grid-template-rows: 72px auto;
+    grid-template-rows: auto 72px;
   }
   .s-app { grid-column: 1; grid-row: 1 / span 2; display: flex; flex-direction: column; }
-  #s-pstream { grid-column: 2 / span 3; grid-row: 1; }
-  #s-ppoll { grid-column: 2; grid-row: 2; }
-  .s-cdn { grid-column: 3; grid-row: 2; display: flex; flex-direction: column; }
-  #s-porigin { grid-column: 4; grid-row: 2; }
+  #s-pstream { grid-column: 2 / span 3; grid-row: 2; }
+  #s-ppoll { grid-column: 2; grid-row: 1; }
+  .s-cdn { grid-column: 3; grid-row: 1; display: flex; flex-direction: column; }
+  #s-porigin { grid-column: 4; grid-row: 1; }
   .s-ld { grid-column: 5; grid-row: 1 / span 2; display: flex; flex-direction: column; }
   .s-app .card, .s-cdn .card, .s-ld .card { flex: 1 1 auto; }
   .s-app .cards { display: flex; align-items: stretch; flex: 1 1 auto; }
