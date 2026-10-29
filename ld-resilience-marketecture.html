@@ -96,10 +96,16 @@
 
   /* ---------- architecture ---------- */
   .arch {
-    display: flex;
-    align-items: stretch;
-    gap: 0;
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) clamp(26px, 3.4vw, 52px) 320px;
+    row-gap: 16px;
   }
+  .zone-infra { grid-column: 1; grid-row: 1; }
+  #p3 { grid-column: 2; grid-row: 1; }
+  .zone-ld { grid-column: 3; grid-row: 1 / span 2; }
+  #p4 { grid-column: 2; grid-row: 2; }
+  .zone-mobile { grid-column: 1; grid-row: 2; display: flex; flex-direction: column; }
+  .zone-mobile .cards { display: flex; align-items: stretch; flex: 1 1 auto; }
   .zone {
     border: 1px solid var(--border);
     border-radius: 16px;
@@ -120,7 +126,13 @@
   .infra-row { display: flex; align-items: stretch; flex: 1 1 auto; }
   .zone-app { flex: 1 1 auto; display: flex; flex-direction: column; }
   .zone-app .cards { display: flex; align-items: stretch; flex: 1 1 auto; }
-  .zone-ld { width: 300px; flex: 0 0 auto; display: flex; flex-direction: column; }
+  .zone-ld { display: flex; flex-direction: column; }
+  .sublabel { font: 500 11px/1 "JetBrains Mono", monospace; color: var(--muted); margin: 4px 2px 8px; }
+  .card.compact { padding: 12px 14px; gap: 6px; margin-bottom: 8px; }
+  .card.compact h3 { font-size: 14px; }
+  .card.compact .role { font-size: 12.5px; }
+  .card.compact .status { padding-top: 2px; }
+  .card.compact + .sublabel { margin-top: 8px; }
 
   .apppill {
     display: inline-flex;
@@ -294,6 +306,8 @@
   @keyframes flow { to { background-position: -14px 0; } }
   .pipe.cut .line { animation: none; background: repeating-linear-gradient(to left, var(--down) 0 4px, transparent 4px 12px); opacity: .45; }
   .pipe.cut::before { border-color: var(--down); opacity: .45; }
+  .pipe.poll .line { animation-duration: 2.8s; opacity: .45; }
+  .pipe.poll::before { opacity: .45; }
 
   /* failover link inside LD zone */
   .failover {
@@ -373,12 +387,18 @@
   .legend .k-serve { width: 10px; height: 10px; border-radius: 3px; background: var(--lime); border: 1px solid var(--lime-edge); }
   .legend .k-ok { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); }
   .legend .k-down { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); }
+  .legend .k-poll { width: 18px; height: 2px; opacity: .45;
+    background: repeating-linear-gradient(to right, var(--blue) 0 6px, transparent 6px 10px); }
 
   /* ---------- responsive ---------- */
-  @media (max-width: 900px) {
-    .arch { flex-direction: column; }
-    .zone-ld { width: auto; }
-    .zone-app .cards { flex-direction: column; }
+  @media (max-width: 1024px) {
+    .arch { grid-template-columns: minmax(0, 1fr); row-gap: 0; }
+    .zone-infra, #p3, .zone-ld, #p4, .zone-mobile { grid-column: 1; }
+    #p3 { grid-row: 2; }
+    .zone-ld { grid-row: 3; }
+    #p4 { grid-row: 4; }
+    .zone-mobile { grid-row: 5; }
+    .zone-app .cards, .zone-mobile .cards { flex-direction: column; }
     .infra-row { flex-direction: column; }
     .pipe { flex: 0 0 30px; align-self: center; width: 2px; flex-direction: column; justify-content: center; }
     .pipe .line { width: 2px; height: 100%; flex: 1;
@@ -387,10 +407,13 @@
     @keyframes flowv { to { background-position: 0 -14px; } }
     .pipe::before { transform: rotate(135deg); margin: 0 0 -2px; }
     .pipe.cut .line { background: repeating-linear-gradient(to top, var(--down) 0 4px, transparent 4px 12px); }
-    .arch { gap: 0; }
-    .zone-infra { order: 0; }
-    .pipe-main { order: 1; }
-    .zone-ld { order: 2; }
+    #p3, #p4 { height: 30px; justify-self: center; }
+    /* the mobile row sits below LaunchDarkly, so its link points down */
+    #p4 { flex-direction: column-reverse; }
+    #p4 .line { background: repeating-linear-gradient(to bottom, var(--blue) 0 6px, transparent 6px 14px); animation-name: flowd; }
+    @keyframes flowd { to { background-position: 0 14px; } }
+    #p4::before { transform: rotate(-45deg); margin: -2px 0 0; }
+    #p4.cut .line { background: repeating-linear-gradient(to bottom, var(--down) 0 4px, transparent 4px 12px); }
     .console { grid-template-columns: 1fr; }
     .controls { justify-content: flex-start; }
   }
@@ -415,11 +438,11 @@
         <span class="zlabel">Your infrastructure</span>
         <div class="infra-row">
           <section class="zone zone-app" aria-label="Your application">
-            <div class="apppill" id="apppill"><span class="knob"></span><span id="appstate">Your app: online, serving customers</span></div>
+            <div class="apppill"><span class="knob"></span><span>Your backend: online, serving customers</span></div>
             <div class="cards">
               <article class="card" id="c-sdk">
                 <span class="badge">Serving now</span>
-                <div class="chead"><h3>SDK</h3><span class="fixed">always on</span></div>
+                <div class="chead"><h3>Server SDK</h3><span class="fixed">always on</span></div>
                 <p class="role">Evaluates every decision in-process</p>
                 <div class="chips">
                   <span class="chip">local evaluation</span>
@@ -451,6 +474,20 @@
 
     <section class="zone zone-ld" aria-label="LaunchDarkly cloud">
       <span class="zlabel">LaunchDarkly</span>
+      <span class="sublabel">delivery</span>
+      <article class="card compact" id="c-stream">
+        <span class="badge">Serving now</span>
+        <div class="chead"><h3>Streaming</h3><button class="tog" role="switch" aria-checked="true" data-layer="stream" aria-label="Streaming"></button></div>
+        <p class="role">Pushes each change the moment it’s made</p>
+        <div class="status"><i class="dot"></i><span class="slabel">healthy</span></div>
+      </article>
+      <article class="card compact" id="c-poll">
+        <span class="badge">Serving now</span>
+        <div class="chead"><h3>Polling · CDN</h3><button class="tog" role="switch" aria-checked="true" data-layer="poll" aria-label="Polling through the CDN"></button></div>
+        <p class="role">Serves flag data from the edge, for polling and fast server starts</p>
+        <div class="status"><i class="dot"></i><span class="slabel">healthy</span></div>
+      </article>
+      <span class="sublabel">origin regions</span>
       <article class="card" id="c-east" style="flex:0 0 auto">
         <span class="badge">Serving now</span>
         <div class="chead"><h3>Region 1</h3><button class="tog" role="switch" aria-checked="true" data-layer="east" aria-label="Region 1"></button></div>
@@ -470,6 +507,32 @@
         <div class="status"><i class="dot"></i><span class="slabel">healthy</span></div>
       </article>
     </section>
+
+    <div class="pipe pipe-mobile" id="p4"><div class="line"></div></div>
+
+    <section class="zone zone-mobile" aria-label="End-user devices">
+      <span class="zlabel">End-user devices</span>
+      <div class="apppill"><span class="knob"></span><span>Your mobile app: online, serving customers</span></div>
+      <div class="cards">
+        <article class="card" id="c-msdk">
+          <span class="badge">Serving now</span>
+          <div class="chead"><h3>Mobile SDK</h3><span class="fixed">always on</span></div>
+          <p class="role">Receives values already evaluated for this user — never your rules</p>
+          <div class="chips">
+            <span class="chip">evaluated values only</span>
+            <span class="chip" id="chip-mdefaults">code-level defaults</span>
+          </div>
+          <div class="status"><i class="dot"></i><span class="slabel">healthy</span></div>
+        </article>
+        <div class="pipe" id="p5"><div class="line"></div></div>
+        <article class="card" id="c-mcache">
+          <span class="badge">Serving now</span>
+          <div class="chead"><h3>On-device cache</h3><button class="tog" role="switch" aria-checked="true" data-layer="mcache" aria-label="On-device cache"></button></div>
+          <p class="role">Last-known values, saved on the device — survives restarts</p>
+          <div class="status"><i class="dot"></i><span class="slabel">healthy</span></div>
+        </article>
+      </div>
+    </section>
   </div>
 
   <div class="console">
@@ -478,7 +541,7 @@
     </div>
     <p class="narration" aria-live="polite" id="narration">
       <span class="step-k" id="stepk">healthy path</span>
-      <span id="story">State streams from Region 1 to every connected SDK — changes typically land worldwide in under 200 ms, and every decision evaluates locally, in-process.</span>
+      <span id="story">State streams from Region 1 to every connected SDK — changes typically land worldwide in under 200 ms, and server SDKs evaluate every decision locally, in-process.</span>
     </p>
     <div class="controls">
       <button class="btn-ghost" id="reset" hidden>Restore everything</button>
@@ -490,6 +553,7 @@
     <span><i class="k-serve"></i>serving your app</span>
     <span><i class="k-ok"></i>healthy</span>
     <span><i class="k-down"></i>unreachable</span>
+    <span><i class="k-poll"></i>faded link: polling instead of streaming</span>
   </div>
 </main>
 
@@ -497,10 +561,15 @@
 (function () {
   "use strict";
   var $ = function (id) { return document.getElementById(id); };
-  var cards = { east: $("c-east"), west: $("c-west"), relay: $("c-relay"), cache: $("c-cache"), sdk: $("c-sdk") };
-  var pipes = { p1: $("p1"), p2: $("p2"), p3: $("p3") };
-  var keys = ["a", "b", "c", "east", "west", "relay", "cache"];
+  var cards = {
+    east: $("c-east"), west: $("c-west"), stream: $("c-stream"), poll: $("c-poll"),
+    relay: $("c-relay"), cache: $("c-cache"), sdk: $("c-sdk"), mcache: $("c-mcache"), msdk: $("c-msdk")
+  };
+  var pipes = { p1: $("p1"), p2: $("p2"), p3: $("p3"), p4: $("p4"), p5: $("p5") };
+  var keys = ["a", "b", "c", "east", "west", "stream", "poll", "relay", "cache", "mcache"];
   var azs = ["a", "b", "c"];
+  var fixed = ["sdk", "msdk"];
+  var caches = { cache: "sdk", mcache: "msdk" }; // cache -> what answers once it's gone
 
   // A layer state: true = up. "off" lists the layers taken down.
   function st(off) {
@@ -523,7 +592,7 @@
   var steps = [
     {
       k: "healthy path",
-      story: "State streams from Region 1 to every connected SDK — changes typically land worldwide in under 200 ms, and every decision evaluates locally, in-process.",
+      story: "State streams from Region 1 to every connected SDK — changes typically land worldwide in under 200 ms, and server SDKs evaluate every decision locally, in-process.",
       state: st([]),
       next: "Take an availability zone down"
     },
@@ -562,41 +631,76 @@
   var state = st([]);
   var i = 0; // index into steps when the state matches one, else -1
 
-  // Everything shown follows from the layer states. SDKs pointed at a Relay
-  // Proxy don't go around it, so with the proxy down they serve from cache.
+  // Everything shown follows from the layer states. LaunchDarkly is reachable
+  // when an origin region is up and streaming or polling can deliver from it.
+  // Server SDKs pointed at a Relay Proxy don't go around it, so with the proxy
+  // down they serve from cache. Mobile SDKs connect to LaunchDarkly directly.
   function derive(s) {
     var eastUp = s.east && azs.some(function (z) { return s[z]; });
-    var ldUp = eastUp || s.west;
-    var serving = !s.relay ? (s.cache ? "cache" : "sdk") :
-      eastUp ? "east" : s.west ? "west" : "relay";
+    var originUp = eastUp || s.west;
+    var region = eastUp ? "east" : s.west ? "west" : null;
+    var chan = !originUp ? null : s.stream ? "stream" : s.poll ? "poll" : null;
+    var ldUp = !!chan;
+    var sb = !s.relay ? (s.cache ? "cache" : "sdk") : ldUp ? region : "relay";
+    var sm = ldUp ? region : s.mcache ? "mcache" : "msdk";
     return {
       eastUp: eastUp,
+      originUp: originUp,
+      chan: chan,
       ldUp: ldUp,
-      serving: serving,
-      cut: { p3: !ldUp || !s.relay, p2: !s.relay, p1: serving === "sdk" },
+      sb: sb,
+      sm: sm,
+      serving: [sb, sm].concat(chan ? [chan] : []),
+      cut: { p4: !ldUp, p3: !ldUp || !s.relay, p2: !s.relay, p1: sb === "sdk", p5: sm === "msdk" },
       foHot: !eastUp && s.west
     };
   }
 
+  function mobileNote(s, d) {
+    if (d.sm === "mcache") return !s.cache ?
+      " Mobile apps keep the values saved on the device, even across a restart." :
+      " Mobile apps evaluate from values saved on the device.";
+    if (d.sm === "msdk") return " Mobile apps with nothing saved on the device fall back to code-level defaults.";
+    if (d.sb !== d.sm) return " Mobile apps typically connect to LaunchDarkly directly, so they stay up to date.";
+    if (!s.mcache) return " Mobile apps refill their on-device cache as they connect.";
+    return "";
+  }
+
+  function chanNote(s, d) {
+    if (d.chan === "poll") return " Streaming is down. SDKs keep serving the last state they received while they reconnect, and SDKs on LaunchDarkly’s newer data system fall back to polling through the CDN — changes arrive on the next poll instead of the moment they’re made.";
+    if (d.chan === "stream" && !s.poll) return " The CDN is down. Running SDKs don’t notice, and new ones initialize from the stream instead.";
+    return "";
+  }
+
   function customStory(s, d) {
     var azDown = azs.filter(function (z) { return !s[z]; }).map(function (z) { return "AZ-" + z; });
-    var tail = !s.cache && d.serving !== "sdk" ? " The cache was cleared, so SDKs refill it as they start." : "";
-    switch (d.serving) {
+    var tail = (!s.cache && d.sb !== "sdk" ? " The cache was cleared, so SDKs refill it as they start." : "");
+    var base;
+    switch (d.sb) {
       case "east":
-        if (!azDown.length) return steps[0].story + tail;
-        if (azDown.length === 2) return azDown.join(" and ") + " are down. The last zone carries Region 1 on its own. Nothing changes for your app." + tail;
-        return azDown[0] + " is down. The other zones absorb the load inside Region 1. Nothing changes for your app." + tail;
+        if (!azDown.length) base = d.chan === "stream" ? steps[0].story : "Region 1 is healthy, and server SDKs evaluate every decision locally, in-process.";
+        else if (azDown.length === 2) base = azDown.join(" and ") + " are down. The last zone carries Region 1 on its own. Nothing changes for your app.";
+        else base = azDown[0] + " is down. The other zones absorb the load inside Region 1. Nothing changes for your app.";
+        return base + chanNote(s, d) + tail + mobileNote(s, d);
       case "west":
-        return (s.east ? "Every zone in Region 1 is down, so the region goes dark." : "Region 1 goes dark.") +
-          " Region 2 takes over automatically — same state, same stream." + tail;
+        base = (s.east ? "Every zone in Region 1 is down, so the region goes dark." : "Region 1 goes dark.") +
+          " Region 2 takes over automatically — same state" + (d.chan === "stream" ? ", same stream." : ".");
+        return base + chanNote(s, d) + tail + mobileNote(s, d);
       case "relay":
-        return steps[3].story;
+        base = d.originUp ?
+          "Streaming and polling are both down, so nothing can reach LaunchDarkly. Your Relay Proxy — inside your own network — keeps serving the latest state it received." :
+          steps[3].story;
+        return base + mobileNote(s, d);
       case "cache":
-        if (d.ldUp) return "The Relay Proxy is down. SDKs pointed at it keep evaluating from their local cache — no errors served — and pick up changes again when it’s back.";
-        return "LaunchDarkly is unreachable and the Relay Proxy is down. Running SDKs keep evaluating from their local cache — no network required, no errors served.";
+        base = d.ldUp ?
+          "The Relay Proxy is down. Server SDKs pointed at it keep evaluating from their local cache — no errors served — and pick up changes again when it’s back." :
+          "LaunchDarkly is unreachable and the Relay Proxy is down. Running SDKs keep evaluating from their local cache — no network required, no errors served.";
+        return base + chanNote(s, d) + mobileNote(s, d);
       default:
-        if (d.ldUp) return "The Relay Proxy is down and the app restarts with an empty cache. Code-level defaults answer instantly until the proxy is back.";
-        return steps[5].story;
+        base = d.ldUp ?
+          "The Relay Proxy is down and the backend restarts with an empty cache. Code-level defaults answer instantly until the proxy is back." :
+          steps[5].story;
+        return base + chanNote(s, d) + mobileNote(s, d);
     }
   }
 
@@ -614,12 +718,15 @@
     var d = derive(state);
     Object.keys(cards).forEach(function (k) {
       var el = cards[k];
-      var down = k === "east" ? !d.eastUp : k !== "sdk" && !state[k];
+      var on = d.serving.indexOf(k) > -1;
+      var down = k === "east" ? !d.eastUp : fixed.indexOf(k) < 0 && !state[k];
+      var label;
+      if (down) label = !caches[k] ? "unreachable" : d.serving.indexOf(caches[k]) > -1 ? "cleared" : "cleared, refilling";
+      else if (on) label = "serving";
+      else label = (k === "stream" || k === "poll") && d.originUp ? "standing by" : (k === "stream" || k === "poll") ? "idle" : "healthy";
       el.classList.toggle("down", down);
-      el.classList.toggle("serving", d.serving === k);
-      el.querySelector(".slabel").textContent =
-        down ? (k !== "cache" ? "unreachable" : d.serving === "sdk" ? "cleared" : "cleared, refilling") :
-        (d.serving === k ? "serving" : "healthy");
+      el.classList.toggle("serving", on);
+      el.querySelector(".slabel").textContent = label;
       var tog = el.querySelector(".tog");
       if (tog) tog.setAttribute("aria-checked", state[k] ? "true" : "false");
     });
@@ -629,13 +736,15 @@
       $("az-" + z).setAttribute("aria-disabled", state.east ? "false" : "true");
     });
     Object.keys(pipes).forEach(function (k) { pipes[k].classList.toggle("cut", d.cut[k]); });
+    ["p3", "p4"].forEach(function (k) { pipes[k].classList.toggle("poll", d.chan === "poll"); });
     $("fo").classList.toggle("hot", d.foHot);
-    $("chip-defaults").classList.toggle("hot", d.serving === "sdk");
+    $("chip-defaults").classList.toggle("hot", d.sb === "sdk");
+    $("chip-mdefaults").classList.toggle("hot", d.sm === "msdk");
 
     var n = offCount(state);
     if (i > -1) {
       $("stepk").textContent = steps[i].k;
-      $("story").textContent = steps[i].story;
+      $("story").textContent = steps[i].story + mobileNote(state, d);
       $("next").textContent = steps[i].next;
     } else {
       var j = nextStep(state);
@@ -646,10 +755,11 @@
     $("next").hidden = i < 0 && !j;
     $("reset").hidden = n === 0;
     for (var m = 0; m < steps.length; m++) { $("l" + m).classList.toggle("on", i > -1 && m <= i); }
-    var pill = $("apppill");
-    pill.classList.remove("pulse");
-    void pill.offsetWidth;
-    pill.classList.add("pulse");
+    Array.prototype.forEach.call(document.querySelectorAll(".apppill"), function (pill) {
+      pill.classList.remove("pulse");
+      void pill.offsetWidth;
+      pill.classList.add("pulse");
+    });
   }
 
   function go(j) { i = j; state = st([]); keys.forEach(function (k) { state[k] = steps[j].state[k]; }); render(); }

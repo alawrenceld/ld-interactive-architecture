@@ -15,6 +15,11 @@ SDK + code defaults, local cache, Relay Proxy, LaunchDarkly cloud
 "break the next thing" stepper that walks six states: healthy, AZ down,
 Region 1 down, both regions down, Relay Proxy down, cold restart with
 nothing reachable. The app-status pill stays "online" through every step.
+Every layer also has its own on/off switch: each availability zone, both
+regions, the streaming and CDN polling delivery layers, the Relay Proxy,
+and the backend and on-device caches. A mobile-client row below the
+backend connects straight to LaunchDarkly, with values saved on the
+device that survive restarts.
 
 ### ld-architecture-value.html
 The architectural-value story as four benefit scenes. One delivery diagram
@@ -34,7 +39,8 @@ Fast start (~25 ms), Fast changes (<200 ms, 138-byte delta), Failover built in
 - Vanilla JS only; state machines live at the bottom of each file in the
   scenes/steps arrays — copy edits happen there and in the markup, nothing
   is generated.
-- Responsive: zones stack and pipes rotate vertical below ~900px.
+- Responsive: zones stack and pipes rotate vertical below ~1024px on the
+  resilience page and ~900px on the value page.
 
 ## Status / before production use
 
