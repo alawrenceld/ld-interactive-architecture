@@ -575,6 +575,8 @@
   #s-porigin { grid-column: 4; grid-row: 2; }
   .s-ld { grid-column: 5; grid-row: 1 / span 2; display: flex; flex-direction: column; }
   .s-app .card, .s-cdn .card, .s-ld .card { flex: 1 1 auto; }
+  .s-app .cards { display: flex; align-items: stretch; flex: 1 1 auto; }
+  .s-app .cards .card { flex: 1 1 0; min-width: 0; }
   .sread { margin: 6px 0 0; display: grid; gap: 8px; }
   .sread div { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--border); padding-top: 8px; }
   .sread dt { font-size: 12.5px; color: var(--muted); }
@@ -603,6 +605,7 @@
     #s-ppoll { grid-column: 1; grid-row: 4; }
     #s-pstream { grid-column: 2; grid-row: 2 / span 3; }
     .s-app { grid-column: 1 / span 2; grid-row: 5; }
+    .s-app .cards { flex-direction: column-reverse; } /* cache above the SDK, so state flows down */
     #s-porigin, #s-ppoll { height: 44px; justify-self: center; }
     #s-pstream { justify-self: center; height: auto; align-self: stretch; }
     .sarch .ptag { left: 12px; top: 50%; transform: translateY(-50%); }
@@ -794,15 +797,24 @@
   <div class="sarch" aria-label="How an SDK starts up">
     <section class="zone s-app" aria-label="Your app">
       <span class="zlabel">Your app</span>
-      <article class="card" id="s-sdk">
-        <div class="chead"><h3>Server SDK</h3></div>
-        <p class="role">Runs inside your app</p>
-        <dl class="sread">
-          <div><dt>flag data</dt><dd id="s-data">none yet</dd></div>
-          <div><dt>evaluating from</dt><dd id="s-eval">code defaults</dd></div>
-          <div><dt>connection</dt><dd id="s-conn">none</dd></div>
-        </dl>
-      </article>
+      <div class="cards">
+        <article class="card" id="s-sdk">
+          <div class="chead"><h3>Server SDK</h3></div>
+          <p class="role">Evaluates every flag in-process</p>
+          <dl class="sread">
+            <div><dt>evaluating from</dt><dd id="s-eval">code defaults</dd></div>
+            <div><dt>connection</dt><dd id="s-conn">none</dd></div>
+          </dl>
+        </article>
+        <div class="pipe" id="s-pcache"><div class="line"></div><i class="pkt" id="s-kcache"></i></div>
+        <article class="card" id="s-cache">
+          <div class="chead"><h3>Local cache</h3></div>
+          <p class="role">Flag state held in memory by the SDK</p>
+          <dl class="sread">
+            <div><dt>holds</dt><dd id="s-data">none yet</dd></div>
+          </dl>
+        </article>
+      </div>
     </section>
 
     <div class="pipe" id="s-pstream"><span class="ptag" id="s-tstream">streaming</span><div class="line"></div><i class="pkt" id="s-kstream"></i></div>
@@ -1221,36 +1233,36 @@
     },
     {
       k: "step 3 of 6 — ready",
-      story: "The edge answers with complete, ready-to-run state in about 25 ms. The SDK is ready and evaluates every flag locally, in-process.",
+      story: "The edge answers with complete, ready-to-run state in about 25 ms. It lands in the SDK’s local cache, and the SDK evaluates every flag locally, in-process.",
       data: "complete · v41", eval: "local, in-process", conn: "fetched from the CDN",
-      live: ["s-ppoll"], hot: ["s-cdncard", "s-sdk"], chip: false, pkts: [["s-kpoll", "left"]], tpoll: "full state", tstream: "streaming",
+      live: ["s-ppoll", "s-pcache"], hot: ["s-cdncard", "s-cache", "s-sdk"], chip: false, pkts: [["s-kpoll", "left"], ["s-kcache", "left"]], tpoll: "full state", tstream: "streaming",
       next: "Open the stream"
     },
     {
       k: "step 4 of 6 — connect",
       story: "The SDK opens a streaming connection to a LaunchDarkly region and says which version it already has.",
       data: "complete · v41", eval: "local, in-process", conn: "connecting…",
-      live: ["s-pstream"], hot: ["s-region"], chip: false, pkts: [["s-kstream", "right"]], tpoll: "polling", tstream: "connect · have v41",
+      live: ["s-pstream", "s-pcache"], hot: ["s-region"], chip: false, pkts: [["s-kstream", "right"]], tpoll: "polling", tstream: "connect · have v41",
       next: "Catch up"
     },
     {
       k: "step 5 of 6 — catch up",
       story: "The region catches the SDK up from v41, usually by sending just the changes since. Nothing made during startup is missed, even if the edge was a little behind.",
       data: "current · v42", eval: "local, in-process", conn: "streaming",
-      live: ["s-pstream"], hot: ["s-region", "s-sdk"], chip: true, pkts: [["s-kstream", "left"]], tpoll: "polling", tstream: "changes since v41",
+      live: ["s-pstream", "s-pcache"], hot: ["s-region", "s-cache", "s-sdk"], chip: true, pkts: [["s-kstream", "left"], ["s-kcache", "left"]], tpoll: "polling", tstream: "changes since v41",
       next: "Make a flag change"
     },
     {
       k: "step 6 of 6 — a flag change",
       story: "A flag changes. The region streams it to your app the moment it’s made, as a small update, and sends it to the CDN so the next SDK to start gets it too.",
       data: "live · v43", eval: "local, in-process", conn: "streaming",
-      live: ["s-pstream"], hot: ["s-sdk", "s-cdncard", "s-region"], chip: true,
-      pkts: [["s-kstream", "loop"], ["s-korigin", "loop"]], tpoll: "polling", tstream: "Δ change · v43",
+      live: ["s-pstream", "s-pcache"], hot: ["s-cache", "s-sdk", "s-cdncard", "s-region"], chip: true,
+      pkts: [["s-kstream", "loop"], ["s-korigin", "loop"], ["s-kcache", "loop"]], tpoll: "polling", tstream: "Δ change · v43",
       next: "Start over"
     }
   ];
-  var links = ["s-pstream", "s-ppoll"];
-  var cards = ["s-sdk", "s-cdncard", "s-region"];
+  var links = ["s-pstream", "s-ppoll", "s-pcache"];
+  var cards = ["s-sdk", "s-cache", "s-cdncard", "s-region"];
   var i = 0;
 
   function render() {
@@ -1258,7 +1270,7 @@
     links.forEach(function (id) { $(id).classList.toggle("idle", s.live.indexOf(id) < 0); });
     cards.forEach(function (id) { $(id).classList.toggle("serving", s.hot.indexOf(id) > -1); });
     $("s-chip").classList.toggle("hot", s.chip);
-    ["s-kpoll", "s-kstream", "s-korigin"].forEach(function (id) {
+    ["s-kpoll", "s-kstream", "s-korigin", "s-kcache"].forEach(function (id) {
       var el = $(id), p = s.pkts.filter(function (x) { return x[0] === id; })[0];
       el.className = "pkt";
       if (p) { void el.offsetWidth; el.classList.add(p[1]); }
