@@ -22,7 +22,6 @@
     --lime-edge: #B9D82A;
     --warn: #FF9D29;
     --ok: #1FA463;
-    --bezel: #2A2A2E;
     --down: #A2A2AC;
     --shadow-sm: 0 1px 2px rgba(25,25,25,.06);
     --shadow-md: 0 2px 4px rgba(25,25,25,.05), 0 12px 28px rgba(25,25,25,.08);
@@ -46,7 +45,6 @@
       --blue-ghost: rgba(94,117,255,.14);
       --lime-edge: #DDFF46;
       --ok: #3DD68C;
-      --bezel: #55555E;
       --down: #6B6B74;
       --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
       --shadow-md: 0 2px 4px rgba(0,0,0,.3), 0 12px 28px rgba(0,0,0,.45);
@@ -66,7 +64,6 @@
     --blue-ghost: rgba(94,117,255,.14);
     --lime-edge: #DDFF46;
     --ok: #3DD68C;
-    --bezel: #55555E;
     --down: #6B6B74;
     --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
     --shadow-md: 0 2px 4px rgba(0,0,0,.3), 0 12px 28px rgba(0,0,0,.45);
@@ -137,8 +134,8 @@
   .zone.zone-mobile {
     justify-self: end;
     width: 250px;
-    border: 6px solid var(--bezel);
-    border-radius: 40px;
+    border: 2px solid var(--border-strong);
+    border-radius: 28px;
     padding: 10px 14px 12px;
     box-shadow: var(--shadow-md);
   }
@@ -147,7 +144,7 @@
     display: block;
     height: 8px;
     border-radius: 999px;
-    background: var(--bezel);
+    background: var(--border-strong);
     margin: 0 auto 12px;
   }
   .zone-mobile::before { width: 72px; }
