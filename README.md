@@ -53,3 +53,6 @@ Fast start (~25 ms), Fast changes (<200 ms, 138-byte delta), Failover built in
   external publish. The reversal-speed figure is inferred, not measured —
   see the architecture page draft doc for the full clearance list.
 - Region names are intentionally generic (Region 1 / Region 2).
+- The resilience page also claims the CDN has 100+ points of presence, and
+  that it keeps serving the last state it received with both regions down.
+  Both need clearing before external publish.

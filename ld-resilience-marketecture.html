@@ -109,7 +109,20 @@
   #p3s { grid-column: 2 / span 3; grid-row: 1; }
   #p3 { grid-column: 2; grid-row: 2; }
   .zone-cdn { grid-column: 3; grid-row: 2 / span 2; margin: 12px 0; display: flex; flex-direction: column; }
-  .zone-cdn .card.compact { margin: auto 0; }
+  .zone-cdn .cdn-body { margin: auto 0; }
+  .zone-cdn .card.compact { margin: 0 0 14px; }
+
+  /* ---------- CDN points of presence ---------- */
+  .pops { padding: 0 2px; }
+  .pnum { display: block; font: 700 30px/1 "Sora", sans-serif; letter-spacing: -0.03em; }
+  .plabel { display: block; margin: 4px 0 10px; font-size: 12px; color: var(--muted); }
+  .pgrid { display: grid; grid-template-columns: repeat(12, 6px); gap: 5px; }
+  .pgrid i { width: 6px; height: 6px; border-radius: 50%; background: var(--ok);
+    transition: background .2s cubic-bezier(0.2,0,0,1), opacity .2s cubic-bezier(0.2,0,0,1); }
+  .pops.live .pgrid i { animation: twinkle 2.4s ease-in-out infinite; }
+  @keyframes twinkle { 50% { opacity: .35; } }
+  .pops.down .pnum, .pops.down .plabel { opacity: .42; }
+  .pops.down .pgrid i { background: var(--down); opacity: .45; }
   #p6 { grid-column: 4; grid-row: 2 / span 2; }
   .zone-ld { grid-column: 5; grid-row: 1 / span 4; }
   #p4 { grid-column: 2; grid-row: 3; }
@@ -441,6 +454,7 @@
 
   @media (prefers-reduced-motion: reduce) {
     .pipe .line { animation: none; }
+    .pops.live .pgrid i { animation: none; }
     .apppill.pulse { animation: none; }
     * { transition-duration: .01ms !important; }
   }
@@ -496,12 +510,19 @@
 
     <section class="zone zone-cdn" aria-label="LaunchDarkly CDN">
       <span class="zlabel">LaunchDarkly CDN</span>
+      <div class="cdn-body">
       <article class="card compact" id="c-poll">
         <span class="badge">Serving now</span>
         <div class="chead"><h3>Polling</h3><button class="tog" role="switch" aria-checked="true" data-layer="poll" aria-label="Polling"></button></div>
         <p class="role">Serves flag data from the edge, for polling and fast server starts</p>
         <div class="status"><i class="dot"></i><span class="slabel">healthy</span></div>
       </article>
+      <div class="pops" id="pops">
+        <span class="pnum">100+</span>
+        <span class="plabel">points of presence worldwide</span>
+        <div class="pgrid" id="pgrid" aria-hidden="true"></div>
+      </div>
+      </div>
     </section>
 
     <div class="pipe pipe-mid" id="p6"><div class="line"></div></div>
@@ -797,6 +818,8 @@
       pipes[k].classList.toggle("idle", !d.cut[k] && !narrow.matches && d.idle.indexOf(k) > -1);
     });
     $("fo").classList.toggle("hot", d.foHot);
+    $("pops").classList.toggle("down", !state.poll);
+    $("pops").classList.toggle("live", d.chan === "poll");
     $("chip-defaults").classList.toggle("hot", d.sb === "sdk");
     ["east", "west"].forEach(function (r) {
       var chip = $("chip-s-" + r);
@@ -849,6 +872,12 @@
   });
   $("reset").addEventListener("click", function () { go(0); });
   narrow.addEventListener("change", render);
+  // one dot per point of presence; staggered so the grid shimmers while serving
+  for (var q = 0; q < 108; q++) {
+    var dot = document.createElement("i");
+    dot.style.animationDelay = (-((q * 37) % 24) / 10) + "s";
+    $("pgrid").appendChild(dot);
+  }
   render();
 })();
 </script>
