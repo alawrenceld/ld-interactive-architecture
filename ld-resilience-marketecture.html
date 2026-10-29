@@ -691,13 +691,14 @@
       sm: sm,
       serving: [sb, sm].concat(chan === "poll" ? ["poll"] : []),
       cut: cuts(s, chan, originUp, sb, sm),
-      idle: chan === "stream" ? ["p3", "p4", "p6"] : [],
+      // LaunchDarkly keeps the CDN current whenever a region is up
+      idle: chan === "stream" ? ["p3", "p4"] : [],
       foHot: !eastUp && s.west
     };
   }
 
-  // Streaming links carry state only while streaming serves; polling links
-  // stand by behind them. Stacked narrow, one link stands for delivery.
+  // Streaming links carry state only while streaming serves; the CDN's links
+  // to your apps stand by behind them. Stacked narrow, one link stands for delivery.
   function cuts(s, chan, originUp, sb, sm) {
     var streamOn = chan === "stream", ldUp = !!chan;
     if (narrow.matches) {
