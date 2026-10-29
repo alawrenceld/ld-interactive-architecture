@@ -560,7 +560,7 @@
 
   <div class="console">
     <div class="ladder" aria-hidden="true">
-      <i id="l0"></i><i id="l1"></i><i id="l2"></i><i id="l3"></i><i id="l4"></i><i id="l5"></i><i id="l6"></i>
+      <i id="l0"></i><i id="l1"></i><i id="l2"></i><i id="l3"></i><i id="l4"></i><i id="l5"></i><i id="l6"></i><i id="l7"></i>
     </div>
     <p class="narration" aria-live="polite" id="narration">
       <span class="step-k" id="stepk">healthy path</span>
@@ -621,39 +621,45 @@
       next: "Take an availability zone down"
     },
     {
-      k: "failure 1 of 6 — an availability zone",
+      k: "failure 1 of 7 — an availability zone",
       story: "AZ-a fails. The other zones absorb the load inside Region 1. Nothing changes for your app — you’d never know.",
       state: st(["a"]),
       next: "Take streaming down"
     },
     {
-      k: "failure 2 of 6 — streaming",
+      k: "failure 2 of 7 — streaming",
       story: "Streaming goes down. SDKs fall back to polling through the CDN automatically and keep serving the whole time. Changes arrive on the next poll instead of the moment they’re made.",
       state: st(["a", "stream"]),
       next: "Take all of Region 1 down"
     },
     {
-      k: "failure 3 of 6 — the primary region",
+      k: "failure 3 of 7 — the primary region",
       story: "Region 1 goes dark. Region 2 takes over automatically — same state, still delivered through the CDN. A cloud region’s bad day never becomes your incident.",
       state: st(["a", "stream", "east"]),
       next: "Take Region 2 down too"
     },
     {
-      k: "failure 4 of 6 — the whole cloud",
-      story: "Both regions are unreachable. Your Relay Proxy — inside your own network — keeps serving the latest state it received. Delivery never left your walls.",
+      k: "failure 4 of 7 — both regions",
+      story: "Both regions are unreachable. The CDN keeps serving the last state it received, so SDKs keep polling it and serving the whole time. New changes resume when a region is back.",
       state: st(["a", "stream", "east", "west"]),
+      next: "Take the CDN down"
+    },
+    {
+      k: "failure 5 of 7 — the whole cloud",
+      story: "Nothing from LaunchDarkly is reachable. Your Relay Proxy — inside your own network — keeps serving the latest state it received. Delivery never left your walls.",
+      state: st(["a", "stream", "east", "west", "poll"]),
       next: "Take the Relay Proxy down"
     },
     {
-      k: "failure 5 of 6 — the proxy",
+      k: "failure 6 of 7 — the proxy",
       story: "The proxy is down too. Running SDKs keep evaluating from their local cache — no network required, no errors served.",
-      state: st(["a", "stream", "east", "west", "relay"]),
+      state: st(["a", "stream", "east", "west", "poll", "relay"]),
       next: "Restart the app with nothing reachable"
     },
     {
-      k: "failure 6 of 6 — restart, cold and cut off",
+      k: "failure 7 of 7 — restart, cold and cut off",
       story: "The app restarts: cache cleared, nothing reachable. Code-level defaults answer instantly. LaunchDarkly is never the reason your app can’t start and serve.",
-      state: st(["a", "stream", "east", "west", "relay", "cache"]),
+      state: st(["a", "stream", "east", "west", "poll", "relay", "cache"]),
       next: "Restore everything"
     }
   ];
@@ -669,10 +675,13 @@
     var eastUp = s.east && azs.some(function (z) { return s[z]; });
     var originUp = eastUp || s.west;
     var region = eastUp ? "east" : s.west ? "west" : null;
-    var chan = !originUp ? null : s.stream ? "stream" : s.poll ? "poll" : null;
+    // Streaming needs a region. The CDN keeps serving the last state it
+    // received even with both regions down.
+    var chan = originUp && s.stream ? "stream" : s.poll ? "poll" : null;
     var ldUp = !!chan;
-    var sb = !s.relay ? (s.cache ? "cache" : "sdk") : ldUp ? region : "relay";
-    var sm = ldUp ? region : s.mcache ? "mcache" : "msdk";
+    var src = originUp ? region : "poll";
+    var sb = !s.relay ? (s.cache ? "cache" : "sdk") : ldUp ? src : "relay";
+    var sm = ldUp ? src : s.mcache ? "mcache" : "msdk";
     return {
       eastUp: eastUp,
       originUp: originUp,
@@ -680,7 +689,7 @@
       ldUp: ldUp,
       sb: sb,
       sm: sm,
-      serving: [sb, sm].concat(chan ? [chan] : []),
+      serving: [sb, sm].concat(chan === "poll" ? ["poll"] : []),
       cut: cuts(s, chan, originUp, sb, sm),
       idle: chan === "stream" ? ["p3", "p4", "p6"] : [],
       foHot: !eastUp && s.west
@@ -690,13 +699,13 @@
   // Streaming links carry state only while streaming serves; polling links
   // stand by behind them. Stacked narrow, one link stands for delivery.
   function cuts(s, chan, originUp, sb, sm) {
-    var streamOn = chan === "stream", poll = originUp && s.poll, ldUp = !!chan;
+    var streamOn = chan === "stream", ldUp = !!chan;
     if (narrow.matches) {
-      return { p6: !ldUp, p3: !ldUp || !s.relay, p4: !ldUp, p2: !s.relay, p1: sb === "sdk", p5: sm === "msdk" };
+      return { p6: !originUp, p3: !ldUp || !s.relay, p4: !ldUp, p2: !s.relay, p1: sb === "sdk", p5: sm === "msdk" };
     }
     return {
       p3s: !streamOn || !s.relay, p4s: !streamOn,
-      p6: !poll, p3: !poll || !s.relay, p4: !poll,
+      p6: !originUp || !s.poll, p3: !s.poll || !s.relay, p4: !s.poll,
       p2: !s.relay, p1: sb === "sdk", p5: sm === "msdk"
     };
   }
@@ -731,10 +740,12 @@
         base = (s.east ? "Every zone in Region 1 is down, so the region goes dark." : "Region 1 goes dark.") +
           " Region 2 takes over automatically — same state" + (d.chan === "stream" ? ", same stream." : ".");
         return base + chanNote(s, d) + tail + mobileNote(s, d);
+      case "poll":
+        return steps[4].story + tail + mobileNote(s, d);
       case "relay":
         base = d.originUp ?
           "Streaming and polling are both down, so nothing can reach LaunchDarkly. Your Relay Proxy — inside your own network — keeps serving the latest state it received." :
-          steps[4].story;
+          steps[5].story;
         return base + mobileNote(s, d);
       case "cache":
         base = d.ldUp ?
@@ -744,7 +755,7 @@
       default:
         base = d.ldUp ?
           "The Relay Proxy is down and the backend restarts with an empty cache. Code-level defaults answer instantly until the proxy is back." :
-          steps[6].story;
+          steps[7].story;
         return base + chanNote(s, d) + mobileNote(s, d);
     }
   }
@@ -768,7 +779,7 @@
       var label;
       if (down) label = !caches[k] ? "unreachable" : d.serving.indexOf(caches[k]) > -1 ? "cleared" : "cleared, refilling";
       else if (on) label = "serving";
-      else label = k === "poll" ? (d.originUp ? "standing by" : "idle") : "healthy";
+      else label = k === "poll" ? "standing by" : "healthy";
       el.classList.toggle("down", down);
       el.classList.toggle("serving", on);
       el.querySelector(".slabel").textContent = label;
