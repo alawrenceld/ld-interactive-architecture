@@ -577,6 +577,9 @@
   .s-app .card, .s-cdn .card, .s-ld .card { flex: 1 1 auto; }
   .s-app .cards { display: flex; align-items: stretch; flex: 1 1 auto; }
   .s-app .cards .card { flex: 1 1 0; min-width: 0; }
+  .seg { margin-left: auto; display: inline-flex; padding: 2px; border: 1px solid var(--border-strong); border-radius: 999px; }
+  .seg button { font: 600 11.5px/1 "Inter", sans-serif; padding: 5px 10px; min-height: 24px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); }
+  .seg button[aria-checked="true"] { background: var(--blue); color: #fff; }
   .sread { margin: 6px 0 0; display: grid; gap: 8px; }
   .sread div { display: flex; justify-content: space-between; gap: 12px; border-top: 1px solid var(--border); padding-top: 8px; }
   .sread dt { font-size: 12.5px; color: var(--muted); }
@@ -808,8 +811,13 @@
         </article>
         <div class="pipe" id="s-pcache"><div class="line"></div><i class="pkt" id="s-kcache"></i></div>
         <article class="card" id="s-cache">
-          <div class="chead"><h3>Local cache</h3></div>
-          <p class="role">Flag state held in memory by the SDK</p>
+          <div class="chead"><h3>Local cache</h3>
+            <div class="seg" role="radiogroup" aria-label="Cache at startup">
+              <button role="radio" aria-checked="true" data-warm="0">cold</button>
+              <button role="radio" aria-checked="false" data-warm="1">warm</button>
+            </div>
+          </div>
+          <p class="role" id="s-cacherole">Empty at startup; filled by the SDK</p>
           <dl class="sread">
             <div><dt>holds</dt><dd id="s-data">none yet</dd></div>
           </dl>
@@ -1215,6 +1223,8 @@
       story: "Your app isn’t running yet. LaunchDarkly’s CDN already holds complete flag state at the edge, ready for it.",
       data: "none", eval: "nothing yet", conn: "none",
       live: [], hot: [], chip: false, pkts: [], tpoll: "polling", tstream: "streaming",
+      warm: { story: "Your app isn’t running yet. Its cache still holds the flag state saved on the last run, and LaunchDarkly’s CDN holds complete state at the edge.",
+              data: "v40 · from last run" },
       next: "Start up"
     },
     {
@@ -1222,6 +1232,9 @@
       story: "Your app starts. Until the SDK has flag data, every evaluation returns the code-level default you passed in — never an error.",
       data: "none yet", eval: "code defaults", conn: "none",
       live: [], hot: ["s-sdk"], chip: false, pkts: [], tpoll: "polling", tstream: "streaming",
+      warm: { story: "Your app starts with a warm cache. The SDK evaluates from the state saved on the last run right away, before it reaches the network.",
+              data: "v40 · from last run", eval: "cached state · v40",
+              live: ["s-pcache"], hot: ["s-cache", "s-sdk"], pkts: [["s-kcache", "left"]] },
       next: "Request from CDN"
     },
     {
@@ -1229,11 +1242,14 @@
       story: "The SDK asks the nearest CDN edge for complete flag state. The request travels to the edge, not across the world.",
       data: "requesting…", eval: "code defaults", conn: "fetching from the CDN",
       live: ["s-ppoll"], hot: ["s-cdncard"], chip: false, pkts: [["s-kpoll", "right"]], tpoll: "request", tstream: "streaming",
+      warm: { story: "The SDK asks the nearest CDN edge for complete, current flag state, and keeps serving cached flags while it waits.",
+              data: "v40 · refreshing…", eval: "cached state · v40", live: ["s-ppoll", "s-pcache"] },
       next: "Receive the payload"
     },
     {
       k: "step 3 of 6 — ready",
       story: "The edge answers with complete, ready-to-run state in about 25 ms. It lands in the SDK’s local cache, and the SDK evaluates every flag locally, in-process.",
+      warm: { story: "The edge answers with fresh, complete state in about 25 ms. It replaces the cached copy, and the SDK evaluates every flag locally, in-process." },
       data: "complete · v41", eval: "local, in-process", conn: "fetched from the CDN",
       live: ["s-ppoll", "s-pcache"], hot: ["s-cdncard", "s-cache", "s-sdk"], chip: false, pkts: [["s-kpoll", "left"], ["s-kcache", "left"]], tpoll: "full state", tstream: "streaming",
       next: "Open the stream"
@@ -1263,10 +1279,21 @@
   ];
   var links = ["s-pstream", "s-ppoll", "s-pcache"];
   var cards = ["s-sdk", "s-cache", "s-cdncard", "s-region"];
-  var i = 0;
+  var i = 0, warm = false;
+
+  // a warm cache overrides some fields on the early steps
+  function current() {
+    var base = steps[i], w = warm && base.warm, s = {};
+    Object.keys(base).forEach(function (k) { s[k] = w && k in w ? w[k] : base[k]; });
+    return s;
+  }
 
   function render() {
-    var s = steps[i];
+    var s = current();
+    $("s-cacherole").textContent = warm ? "Loaded with the state saved on the last run" : "Empty at startup; filled by the SDK";
+    Array.prototype.forEach.call(document.querySelectorAll(".seg button"), function (b) {
+      b.setAttribute("aria-checked", (b.getAttribute("data-warm") === "1") === warm ? "true" : "false");
+    });
     links.forEach(function (id) { $(id).classList.toggle("idle", s.live.indexOf(id) < 0); });
     cards.forEach(function (id) { $(id).classList.toggle("serving", s.hot.indexOf(id) > -1); });
     $("s-chip").classList.toggle("hot", s.chip);
@@ -1290,6 +1317,9 @@
 
   $("s-next").addEventListener("click", function () { i = (i + 1) % steps.length; render(); });
   $("s-reset").addEventListener("click", function () { i = 0; render(); });
+  Array.prototype.forEach.call(document.querySelectorAll(".seg button"), function (b) {
+    b.addEventListener("click", function () { warm = b.getAttribute("data-warm") === "1"; i = 0; render(); });
+  });
   render();
 })();
 </script>

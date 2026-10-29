@@ -28,7 +28,9 @@ as an SVG overlay that redraws on resize.
 A second tab, "Starts fast", steps through a server-side SDK starting up: it
 boots on code defaults, fetches complete flag state from the nearest CDN edge,
 opens a stream that says which version it already has, catches up (usually
-just the changes since), and then receives each new change live. The Relay Proxy is left out of this view. Link to it directly
+just the changes since), and then receives each new change live. A cold/warm
+switch on the local cache shows the warm start: the SDK evaluates from the
+state saved on the last run until the CDN payload refreshes it. The Relay Proxy is left out of this view. Link to it directly
 with `#startup`.
 
 ### ld-architecture-value.html
