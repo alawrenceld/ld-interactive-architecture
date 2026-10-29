@@ -341,10 +341,6 @@
     transition: background .2s cubic-bezier(0.2,0,0,1), color .2s cubic-bezier(0.2,0,0,1);
   }
   .chip.hot { background: var(--lime); color: #191919; font-weight: 600; }
-  /* streaming runs inside each region; either chip switches it */
-  .schip { font: 500 12px/1.4 "Inter", sans-serif; border: 1px solid transparent; min-height: 24px; cursor: pointer; }
-  .schip.down { background: transparent; border: 1px dashed #E5484D; color: #E5484D; text-decoration: line-through; }
-  .schip[aria-disabled="true"] { cursor: default; }
 
   /* ---------- pipes ---------- */
   .pipe {
@@ -416,7 +412,10 @@
     display: block;
     margin-bottom: 4px;
   }
-  .controls { display: flex; gap: 10px; flex-wrap: wrap; justify-content: flex-end; }
+  /* fixed width, stacked, and hidden by visibility, so labels changing never reflow the narration */
+  .controls { display: flex; flex-direction: column; gap: 10px; width: 280px; max-width: 100%; }
+  .controls button { width: 100%; }
+  .controls #next { order: -1; }
   button {
     font: 600 14.5px/1 "Inter", sans-serif;
     border-radius: 6px;
@@ -566,7 +565,7 @@
         <span class="badge">Serving now</span>
         <div class="chead"><h3>Region 1</h3><button class="tog" role="switch" aria-checked="true" data-layer="east" aria-label="Region 1"></button></div>
         <p class="role">Primary region</p>
-        <div class="chips"><button class="chip schip" id="chip-s-east" data-layer="stream" role="switch" aria-checked="true" aria-label="Streaming">streaming</button></div>
+        <div class="chips"><span class="chip" id="chip-s-east">streaming</span></div>
         <div class="azrow">
           <button class="az" id="az-a" data-layer="a" role="switch" aria-checked="true" aria-label="Availability zone A">AZ-a</button>
           <button class="az" id="az-b" data-layer="b" role="switch" aria-checked="true" aria-label="Availability zone B">AZ-b</button>
@@ -579,7 +578,7 @@
         <span class="badge">Serving now</span>
         <div class="chead"><h3>Region 2</h3><button class="tog" role="switch" aria-checked="true" data-layer="west" aria-label="Region 2"></button></div>
         <p class="role">Warm failover region</p>
-        <div class="chips"><button class="chip schip" id="chip-s-west" data-layer="stream" role="switch" aria-checked="true" aria-label="Streaming">streaming</button></div>
+        <div class="chips"><span class="chip" id="chip-s-west">streaming</span></div>
         <div class="status"><i class="dot"></i><span class="slabel">healthy</span></div>
       </article>
     </section>
@@ -610,14 +609,14 @@
 
   <div class="console">
     <div class="ladder" aria-hidden="true">
-      <i id="l0"></i><i id="l1"></i><i id="l2"></i><i id="l3"></i><i id="l4"></i><i id="l5"></i><i id="l6"></i><i id="l7"></i>
+      <i id="l0"></i><i id="l1"></i><i id="l2"></i><i id="l3"></i><i id="l4"></i><i id="l5"></i><i id="l6"></i>
     </div>
     <p class="narration" aria-live="polite" id="narration">
       <span class="step-k" id="stepk">healthy path</span>
       <span id="story">State streams from Region 1 to every connected SDK — changes typically land worldwide in under 200 ms, and server SDKs evaluate every decision locally, in-process.</span>
     </p>
     <div class="controls">
-      <button class="btn-ghost" id="reset" hidden>Restore everything</button>
+      <button class="btn-ghost" id="reset" style="visibility:hidden">Restore everything</button>
       <button class="btn-primary" id="next">Take an availability zone down</button>
     </div>
   </div>
@@ -640,7 +639,7 @@
   };
   var pipes = { p1: $("p1"), p2: $("p2"), p3: $("p3"), p3s: $("p3s"), p4: $("p4"), p4s: $("p4s"), p5: $("p5"), p6: $("p6") };
   var narrow = window.matchMedia("(max-width: 1279px)");
-  var keys = ["a", "b", "c", "east", "west", "stream", "poll", "relay", "cache", "mcache"];
+  var keys = ["a", "b", "c", "east", "west", "poll", "relay", "cache", "mcache"];
   var azs = ["a", "b", "c"];
   var fixed = ["sdk", "msdk"];
   var caches = { cache: "sdk", mcache: "msdk" }; // cache -> what answers once it's gone
@@ -671,45 +670,39 @@
       next: "Take an availability zone down"
     },
     {
-      k: "failure 1 of 7 — an availability zone",
+      k: "failure 1 of 6 — an availability zone",
       story: "AZ-a fails. The other zones absorb the load inside Region 1. Nothing changes for your app — you’d never know.",
       state: st(["a"]),
-      next: "Take streaming down"
-    },
-    {
-      k: "failure 2 of 7 — streaming",
-      story: "Streaming goes down. SDKs fall back to polling through the CDN automatically and keep serving the whole time. Changes arrive on the next poll instead of the moment they’re made.",
-      state: st(["a", "stream"]),
       next: "Take all of Region 1 down"
     },
     {
-      k: "failure 3 of 7 — the primary region",
-      story: "Region 1 goes dark. Region 2 takes over automatically — same state, still delivered through the CDN. A cloud region’s bad day never becomes your incident.",
-      state: st(["a", "stream", "east"]),
+      k: "failure 2 of 6 — the primary region",
+      story: "Region 1 goes dark. Region 2 takes over automatically — same state, same stream. A cloud region’s bad day never becomes your incident.",
+      state: st(["a", "east"]),
       next: "Take Region 2 down too"
     },
     {
-      k: "failure 4 of 7 — both regions",
-      story: "Both regions are unreachable. The CDN keeps serving the last state it received, so SDKs keep polling it and serving the whole time. New changes resume when a region is back.",
-      state: st(["a", "stream", "east", "west"]),
+      k: "failure 3 of 6 — both regions",
+      story: "Both regions are unreachable, and streaming with them. SDKs fall back to polling the CDN, which keeps serving the last state it received. New changes resume when a region is back.",
+      state: st(["a", "east", "west"]),
       next: "Take the CDN down"
     },
     {
-      k: "failure 5 of 7 — the whole cloud",
+      k: "failure 4 of 6 — the whole cloud",
       story: "Nothing from LaunchDarkly is reachable. Your Relay Proxy — inside your own network — keeps serving the latest state it received. Delivery never left your walls.",
-      state: st(["a", "stream", "east", "west", "poll"]),
+      state: st(["a", "east", "west", "poll"]),
       next: "Take the Relay Proxy down"
     },
     {
-      k: "failure 6 of 7 — the proxy",
+      k: "failure 5 of 6 — the proxy",
       story: "The proxy is down too. Running SDKs keep evaluating from their local cache — no network required, no errors served.",
-      state: st(["a", "stream", "east", "west", "poll", "relay"]),
-      next: "Restart the app with nothing reachable"
+      state: st(["a", "east", "west", "poll", "relay"]),
+      next: "Restart with nothing reachable"
     },
     {
-      k: "failure 7 of 7 — restart, cold and cut off",
+      k: "failure 6 of 6 — restart, cold and cut off",
       story: "The app restarts: cache cleared, nothing reachable. Code-level defaults answer instantly. LaunchDarkly is never the reason your app can’t start and serve.",
-      state: st(["a", "stream", "east", "west", "poll", "relay", "cache"]),
+      state: st(["a", "east", "west", "poll", "relay", "cache"]),
       next: "Restore everything"
     }
   ];
@@ -725,9 +718,9 @@
     var eastUp = s.east && azs.some(function (z) { return s[z]; });
     var originUp = eastUp || s.west;
     var region = eastUp ? "east" : s.west ? "west" : null;
-    // Streaming needs a region. The CDN keeps serving the last state it
-    // received even with both regions down.
-    var chan = originUp && s.stream ? "stream" : s.poll ? "poll" : null;
+    // Streaming runs inside the regions, so it's up whenever one is. The CDN
+    // keeps serving the last state it received even with both regions down.
+    var chan = originUp ? "stream" : s.poll ? "poll" : null;
     var ldUp = !!chan;
     var src = originUp ? region : "poll";
     var sb = !s.relay ? (s.cache ? "cache" : "sdk") : ldUp ? src : "relay";
@@ -772,7 +765,6 @@
   }
 
   function chanNote(s, d) {
-    if (d.chan === "poll") return " Streaming is down, so SDKs fall back to polling through the CDN — changes arrive on the next poll instead of the moment they’re made.";
     if (d.chan === "stream" && !s.poll) return " The CDN is down. Running SDKs don’t notice, and new ones initialize from the stream instead.";
     return "";
   }
@@ -792,11 +784,11 @@
           " Region 2 takes over automatically — same state" + (d.chan === "stream" ? ", same stream." : ".");
         return base + chanNote(s, d) + tail + mobileNote(s, d);
       case "poll":
-        return steps[4].story + tail + mobileNote(s, d);
+        return steps[3].story + tail + mobileNote(s, d);
       case "relay":
         base = d.originUp ?
           "Streaming and polling are both down, so nothing can reach LaunchDarkly. Your Relay Proxy — inside your own network — keeps serving the latest state it received." :
-          steps[5].story;
+          steps[4].story;
         return base + mobileNote(s, d);
       case "cache":
         base = d.ldUp ?
@@ -806,7 +798,7 @@
       default:
         base = d.ldUp ?
           "The Relay Proxy is down and the backend restarts with an empty cache. Code-level defaults answer instantly until the proxy is back." :
-          steps[7].story;
+          steps[6].story;
         return base + chanNote(s, d) + mobileNote(s, d);
     }
   }
@@ -853,9 +845,6 @@
     ["east", "west"].forEach(function (r) {
       var chip = $("chip-s-" + r);
       chip.classList.toggle("hot", d.chan === "stream" && d.serving.indexOf(r) > -1);
-      chip.classList.toggle("down", !state.stream);
-      chip.setAttribute("aria-checked", state.stream ? "true" : "false");
-      chip.setAttribute("aria-disabled", (r === "east" ? d.eastUp : state.west) ? "false" : "true");
     });
     $("chip-mdefaults").classList.toggle("hot", d.sm === "msdk");
 
@@ -870,8 +859,8 @@
       $("story").textContent = customStory(state, d);
       $("next").textContent = "Break the next thing";
     }
-    $("next").hidden = i < 0 && !j;
-    $("reset").hidden = n === 0;
+    $("next").style.visibility = i < 0 && !j ? "hidden" : "visible";
+    $("reset").style.visibility = n === 0 ? "hidden" : "visible";
     for (var m = 0; m < steps.length; m++) { $("l" + m).classList.toggle("on", i > -1 && m <= i); }
     Array.prototype.forEach.call(document.querySelectorAll(".apppill"), function (pill) {
       pill.classList.remove("pulse");

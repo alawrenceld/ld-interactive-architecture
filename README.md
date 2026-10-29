@@ -14,11 +14,11 @@ SDK + code defaults, local cache, Relay Proxy, the LaunchDarkly CDN
 (polling), and LaunchDarkly itself (Region 1 primary with AZ chips, and
 Region 2 warm failover; streaming runs inside the regions). Streaming lines
 run from the regions straight to your apps, past the CDN. — with a
-"break the next thing" stepper that walks eight states: healthy, AZ down,
-streaming down, Region 1 down, both regions down (the CDN keeps serving),
-CDN down, Relay Proxy down, cold restart with nothing reachable. The app-status pill stays "online" through every step.
+"break the next thing" stepper that walks seven states: healthy, AZ down,
+Region 1 down, both regions down (streaming goes with them; the CDN keeps
+serving), CDN down, Relay Proxy down, cold restart with nothing reachable. The app-status pill stays "online" through every step.
 Every layer also has its own on/off switch: each availability zone, both
-regions, streaming (the chip in each region), CDN polling, the Relay Proxy,
+regions, CDN polling, the Relay Proxy,
 and the backend and on-device caches. A mobile-client row below the
 backend connects straight to LaunchDarkly, with values saved on the
 device that survive restarts.
