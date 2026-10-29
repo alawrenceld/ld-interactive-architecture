@@ -105,7 +105,6 @@
     position: relative;
     display: grid;
     grid-template-columns: minmax(0, 1fr) var(--pipe-w) 180px var(--pipe-w) 230px;
-    grid-template-rows: auto auto auto auto 56px; /* row 5: the laptop's lanes, under the phone */
   }
   .zone-infra { grid-column: 1; grid-row: 1 / span 2; }
   #p3s { grid-column: 2 / span 3; grid-row: 1; }
@@ -126,7 +125,7 @@
   .pops.down .pnum, .pops.down .plabel { opacity: .42; }
   .pops.down .pgrid i { background: var(--down); opacity: .45; }
   #p6 { grid-column: 4; grid-row: 2 / span 2; }
-  .zone-ld { grid-column: 5; grid-row: 1 / span 5; }
+  .zone-ld { grid-column: 5; grid-row: 1 / span 4; }
   #p4 { grid-column: 2; grid-row: 3; }
   #p4s { grid-column: 2 / span 3; grid-row: 4; }
   .zone-mobile { grid-column: 1; grid-row: 3 / span 2; margin-top: 16px; display: flex; flex-direction: column; }
@@ -135,10 +134,12 @@
   /* ---------- the mobile app, drawn as a phone ---------- */
   .zone.zone-mobile {
     justify-self: end;
-    width: 250px;
+    width: 200px;
+    height: 279px; /* the laptop's screen (424 × 10/16) plus its 14px base */
+    align-self: center;
     border: 2px solid var(--border-strong);
-    border-radius: 28px;
-    padding: 10px 14px 12px;
+    border-radius: 24px;
+    padding: 8px 10px 8px;
     box-shadow: var(--shadow-md);
   }
   .zone-mobile::before, .zone-mobile::after {
@@ -147,17 +148,23 @@
     height: 8px;
     border-radius: 999px;
     background: var(--border-strong);
-    margin: 0 auto 12px;
+    margin: 0 auto 6px;
   }
-  .zone-mobile::before { width: 72px; }
-  .zone-mobile::after { width: 90px; height: 4px; margin: 12px auto 0; }
-  .zone-mobile .apppill { align-self: center; }
-  .zone-mobile .card { flex: 0 0 auto; padding: 12px 14px; gap: 6px; }
-  .zone-mobile .card h3 { font-size: 14px; }
-  .zone-mobile .card .role { font-size: 12.5px; }
-  .zone-mobile .card .status { padding-top: 2px; }
+  .zone-mobile::before { width: 56px; height: 6px; }
+  .zone-mobile::after { width: 70px; height: 4px; margin: auto auto 0; }
+  .zone-mobile .apppill { align-self: center; margin: 0 0 6px; padding: 3px 10px 3px 4px; font-size: 11.5px; gap: 6px; }
+  .zone-mobile .apppill .knob { width: 14px; height: 14px; }
+  .zone-mobile .apppill .knob::after { inset: 4.5px; }
+  .zone-mobile .cards { flex: 0 0 auto; }
+  .zone-mobile .card { flex: 0 0 auto; padding: 8px 10px; gap: 3px; }
+  .zone-mobile .card h3 { font-size: 13px; }
+  .zone-mobile .card .role { font-size: 11.5px; line-height: 1.35; }
+  .zone-mobile .card .status { padding-top: 0; font-size: 10.5px; }
+  .zone-mobile .chip { font-size: 11px; padding: 1px 6px; }
+  .zone-mobile .fixed { display: none; }
+  .zone-mobile .tog { transform: scale(.8); transform-origin: right center; }
   /* cache below the SDK, so the link points up */
-  .zone-mobile .pipe { flex: 0 0 26px; align-self: center; width: 2px; flex-direction: column; justify-content: center; }
+  .zone-mobile .pipe { flex: 0 0 14px; align-self: center; width: 2px; flex-direction: column; justify-content: center; }
   .zone-mobile .pipe .line { width: 2px; height: 100%;
     background: repeating-linear-gradient(to top, var(--blue) 0 6px, transparent 6px 14px);
     animation-name: flowup; }
@@ -185,8 +192,9 @@
   .zone.zone-laptop {
     grid-column: 1; grid-row: 3 / span 2;
     justify-self: end; align-self: center;
-    width: 380px;
-    margin: 16px calc(250px + 56px) 14px 0; /* left of the phone, room for the base */
+    width: 424px;
+    aspect-ratio: 16 / 10; /* a laptop screen */
+    margin: 16px calc(200px + 48px) 14px 0; /* left of the phone, room for the base */
     border: 2px solid var(--border-strong);
     border-radius: 14px;
     padding: 10px 12px 12px;
@@ -201,14 +209,15 @@
   }
   .zone-laptop .apppill { align-self: center; }
   .zone-laptop { display: flex; flex-direction: column; }
-  .zone-laptop .cards { display: flex; align-items: stretch; }
+  .zone-laptop .cards { display: flex; align-items: stretch; flex: 1 1 auto; }
+  .zone-laptop .card { min-height: 0; }
   .zone-laptop .card { flex: 1 1 0; padding: 12px 14px; gap: 6px; }
   .zone-laptop .card h3 { font-size: 14px; }
   .zone-laptop .card .role { font-size: 12.5px; }
   .zone-laptop .card .status { padding-top: 2px; }
   .zone-laptop .pipe { flex: 0 0 22px; }
 
-  /* the laptop's links bend under the phone, so they're drawn in SVG */
+  /* the laptop's links run straight across, behind the phone, so they're drawn in SVG */
   .wires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 0; }
   .wire { fill: none; stroke: var(--blue); stroke-width: 2; stroke-dasharray: 6 8; animation: wireflow .9s linear infinite; }
   .wire-head { fill: none; stroke: var(--blue); stroke-width: 2; }
@@ -503,10 +512,9 @@
     #p3 { grid-row: 4; }
     .zone-infra { grid-row: 5; }
     .zone.zone-mobile { grid-row: 6; margin-top: 16px; justify-self: center; }
-    .zone.zone-laptop { grid-row: 7; justify-self: center; margin: 32px 0 14px; width: min(380px, 100%); }
+    .zone.zone-laptop { grid-row: 7; justify-self: center; margin: 32px 0 14px; width: min(424px, 100%); aspect-ratio: auto; }
     .zone-laptop .cards { flex-direction: column-reverse; }
     .zone-laptop::after { left: -6px; right: -6px; }
-    .arch { grid-template-rows: none; }
     .wires { display: none; }
     .zone-cdn { margin: 0; }
     /* one column has no room for a bypass, so its links stand for delivery as a whole */
@@ -655,14 +663,13 @@
         <article class="card" id="c-msdk">
           <span class="badge">Serving now</span>
           <div class="chead"><h3>Mobile SDK</h3><span class="fixed">always on</span></div>
-          <p class="role">Evaluated values only — never your rules</p>
           <div class="chips"><span class="chip" id="chip-mdefaults">code-level defaults</span></div>
           <div class="status"><i class="dot"></i><span class="slabel">healthy</span></div>
         </article>
         <div class="pipe" id="p5"><div class="line"></div></div>
         <article class="card" id="c-mcache">
           <span class="badge">Serving now</span>
-          <div class="chead"><h3>On-device cache</h3><button class="tog" role="switch" aria-checked="true" data-layer="mcache" aria-label="On-device cache"></button></div>
+          <div class="chead"><h3>Cache</h3><button class="tog" role="switch" aria-checked="true" data-layer="mcache" aria-label="On-device cache"></button></div>
           <p class="role">Survives restarts</p>
           <div class="status"><i class="dot"></i><span class="slabel">healthy</span></div>
         </article>
@@ -848,22 +855,32 @@
     return say("Mobile apps", m, "on the device") + say("Browser apps", b, "in the browser");
   }
 
-  // The laptop's two links: polling from the CDN's underside and streaming
-  // from LaunchDarkly, each bending under the phone and up into the laptop.
+  // The laptop's two links run straight left, behind the phone: polling from
+  // the CDN, and streaming from LaunchDarkly, passing behind the CDN too. Each
+  // sits a little below the phone's matching link so the two never overlap.
   function drawWires() {
     var arch = document.querySelector(".arch").getBoundingClientRect();
-    function r(sel) {
-      var b = document.querySelector(sel).getBoundingClientRect();
-      return { l: b.left - arch.left, r: b.right - arch.left, t: b.top - arch.top, b: b.bottom - arch.top, w: b.width };
+    function r(el) {
+      var b = (typeof el === "string" ? document.querySelector(el) : el).getBoundingClientRect();
+      return { l: b.left - arch.left, r: b.right - arch.left, t: b.top - arch.top, b: b.bottom - arch.top, m: (b.top + b.bottom) / 2 - arch.top };
     }
-    var L = r(".zone-laptop"), P = r(".zone-mobile"), C = r(".zone-cdn"), D = r(".zone-ld");
-    var base = L.b + 14, y1 = P.b + 18, y2 = P.b + 38;
-    var xp = L.l + L.w * 0.62, xs = L.l + L.w * 0.38, xc = C.l + C.w / 2;
-    function head(x) { return "M" + (x - 5) + " " + (base + 8) + " L" + x + " " + (base + 2) + " L" + (x + 5) + " " + (base + 8); }
-    $("w-poll").setAttribute("d", "M" + xc + " " + C.b + " V" + y1 + " H" + xp + " V" + (base + 2));
-    $("w-poll-h").setAttribute("d", head(xp));
-    $("w-stream").setAttribute("d", "M" + D.l + " " + y2 + " H" + xs + " V" + (base + 2));
-    $("w-stream-h").setAttribute("d", head(xs));
+    var L = r(".zone-laptop"), C = r(".zone-cdn"), D = r(".zone-ld");
+    // first height inside the laptop, at or below "from", at least 16px clear of the phone's links
+    var taken = [r("#p4").m, r("#p4s").m];
+    function lane(from) {
+      for (var y = Math.max(from, L.t + 40); y < L.b - 20; y += 2) {
+        if (taken.every(function (t) { return Math.abs(t - y) >= 16; })) return y;
+      }
+      return L.b - 24;
+    }
+    var yPoll = Math.min(lane(L.t + (L.b - L.t) * 0.35), C.b - 14);
+    // below the CDN when there's room, so it visibly reaches LaunchDarkly
+    var yStream = lane(Math.max(yPoll + 24, C.b + 10));
+    function head(y) { return "M" + (L.r + 8) + " " + (y - 5) + " L" + (L.r + 2) + " " + y + " L" + (L.r + 8) + " " + (y + 5); }
+    $("w-poll").setAttribute("d", "M" + C.l + " " + yPoll + " H" + (L.r + 2));
+    $("w-poll-h").setAttribute("d", head(yPoll));
+    $("w-stream").setAttribute("d", "M" + D.l + " " + yStream + " H" + (L.r + 2));
+    $("w-stream-h").setAttribute("d", head(yStream));
   }
 
   function chanNote(s, d) {

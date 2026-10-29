@@ -22,7 +22,7 @@ regions, CDN polling, the browser cache, the Relay Proxy,
 and the backend and on-device caches. A mobile-client row below the
 backend connects straight to LaunchDarkly, with values saved on the
 device that survive restarts. A laptop beside it runs the browser SDK with a
-browser cache; its streaming and polling lines bend under the phone, drawn
+browser cache; its streaming and polling lines run straight behind the phone, drawn
 as an SVG overlay that redraws on resize.
 
 ### ld-architecture-value.html
