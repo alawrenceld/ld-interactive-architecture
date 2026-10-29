@@ -126,9 +126,9 @@
   .pops.down .pgrid i { background: var(--down); opacity: .45; }
   #p6 { grid-column: 4; grid-row: 2 / span 2; }
   .zone-ld { grid-column: 5; grid-row: 1 / span 4; }
-  /* devices sit at the left: laptop flush with the edge, then the phone.
+  /* devices sit at the left: laptop (base flush with the edge), then the phone.
      The phone's links reach back across the gap to its right edge. */
-  .arch { --laptop-x: 0px; --phone-x: calc(424px + 20px); --phone-w: 160px; }
+  .arch { --laptop-x: 38px; --phone-x: calc(38px + 424px + 38px + 16px); --phone-w: 160px; }
   #p4 { grid-column: 1 / span 2; grid-row: 3; margin-left: calc(var(--phone-x) + var(--phone-w)); }
   #p4s { grid-column: 1 / span 4; grid-row: 4; margin-left: calc(var(--phone-x) + var(--phone-w)); }
   .zone-mobile { grid-column: 1; grid-row: 3 / span 2; margin-top: 16px; display: flex; flex-direction: column; }
@@ -198,7 +198,7 @@
     justify-self: start; align-self: center;
     width: 424px;
     aspect-ratio: 16 / 10; /* a laptop screen */
-    margin: 16px 0 14px var(--laptop-x); /* room for the base below */
+    margin: 16px 0 14px var(--laptop-x); /* room for the base on both sides */
     border: 2px solid var(--border-strong);
     border-radius: 14px;
     padding: 10px 12px 12px;
@@ -206,7 +206,7 @@
   .zone-laptop::after {
     content: "";
     position: absolute;
-    left: -2px; right: -2px; bottom: -14px; /* as wide as the screen, border included */
+    left: -9%; right: -9%; bottom: -14px;
     height: 10px;
     border-radius: 2px 2px 10px 10px;
     background: var(--border-strong);
@@ -518,6 +518,7 @@
     .zone.zone-mobile { grid-row: 6; margin: 16px 0 0; justify-self: center; }
     .zone.zone-laptop { grid-row: 7; justify-self: center; margin: 32px 0 14px; width: min(424px, 100%); aspect-ratio: auto; }
     .zone-laptop .cards { flex-direction: column-reverse; }
+    .zone-laptop::after { left: -6px; right: -6px; }
     .wires { display: none; }
     .zone-cdn { margin: 0; }
     /* one column has no room for a bypass, so its links stand for delivery as a whole */
