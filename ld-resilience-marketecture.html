@@ -102,8 +102,10 @@
      past the CDN, which sits in rows 2-3 and serves polling. */
   .arch {
     --pipe-w: clamp(26px, 3vw, 48px);
+    position: relative;
     display: grid;
     grid-template-columns: minmax(0, 1fr) var(--pipe-w) 180px var(--pipe-w) 230px;
+    grid-template-rows: auto auto auto auto 56px; /* row 5: the laptop's lanes, under the phone */
   }
   .zone-infra { grid-column: 1; grid-row: 1 / span 2; }
   #p3s { grid-column: 2 / span 3; grid-row: 1; }
@@ -124,7 +126,7 @@
   .pops.down .pnum, .pops.down .plabel { opacity: .42; }
   .pops.down .pgrid i { background: var(--down); opacity: .45; }
   #p6 { grid-column: 4; grid-row: 2 / span 2; }
-  .zone-ld { grid-column: 5; grid-row: 1 / span 4; }
+  .zone-ld { grid-column: 5; grid-row: 1 / span 5; }
   #p4 { grid-column: 2; grid-row: 3; }
   #p4s { grid-column: 2 / span 3; grid-row: 4; }
   .zone-mobile { grid-column: 1; grid-row: 3 / span 2; margin-top: 16px; display: flex; flex-direction: column; }
@@ -176,7 +178,43 @@
     background: var(--zone);
     padding: 16px;
     position: relative;
+    z-index: 1;
   }
+
+  /* ---------- the web app, drawn as a laptop ---------- */
+  .zone.zone-laptop {
+    grid-column: 1; grid-row: 3 / span 2;
+    justify-self: end; align-self: center;
+    width: 380px;
+    margin: 16px calc(250px + 56px) 14px 0; /* left of the phone, room for the base */
+    border: 2px solid var(--border-strong);
+    border-radius: 14px;
+    padding: 10px 12px 12px;
+  }
+  .zone-laptop::after {
+    content: "";
+    position: absolute;
+    left: -9%; right: -9%; bottom: -14px;
+    height: 10px;
+    border-radius: 2px 2px 10px 10px;
+    background: var(--border-strong);
+  }
+  .zone-laptop .apppill { align-self: center; }
+  .zone-laptop { display: flex; flex-direction: column; }
+  .zone-laptop .cards { display: flex; align-items: stretch; }
+  .zone-laptop .card { flex: 1 1 0; padding: 12px 14px; gap: 6px; }
+  .zone-laptop .card h3 { font-size: 14px; }
+  .zone-laptop .card .role { font-size: 12.5px; }
+  .zone-laptop .card .status { padding-top: 2px; }
+  .zone-laptop .pipe { flex: 0 0 22px; }
+
+  /* the laptop's links bend under the phone, so they're drawn in SVG */
+  .wires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 0; }
+  .wire { fill: none; stroke: var(--blue); stroke-width: 2; stroke-dasharray: 6 8; animation: wireflow .9s linear infinite; }
+  .wire-head { fill: none; stroke: var(--blue); stroke-width: 2; }
+  @keyframes wireflow { to { stroke-dashoffset: -14; } }
+  .wire.cut, .wire-head.cut { stroke: var(--down); opacity: .45; animation: none; stroke-dasharray: 4 8; }
+  .wire.idle, .wire-head.idle { opacity: .3; animation: none; }
   .zone .zlabel {
     display: block;
     font-size: 13px;
@@ -465,6 +503,11 @@
     #p3 { grid-row: 4; }
     .zone-infra { grid-row: 5; }
     .zone.zone-mobile { grid-row: 6; margin-top: 16px; justify-self: center; }
+    .zone.zone-laptop { grid-row: 7; justify-self: center; margin: 32px 0 14px; width: min(380px, 100%); }
+    .zone-laptop .cards { flex-direction: column-reverse; }
+    .zone-laptop::after { left: -6px; right: -6px; }
+    .arch { grid-template-rows: none; }
+    .wires { display: none; }
     .zone-cdn { margin: 0; }
     /* one column has no room for a bypass, so its links stand for delivery as a whole */
     #p3s, #p4s { display: none; }
@@ -485,7 +528,7 @@
   }
 
   @media (prefers-reduced-motion: reduce) {
-    .pipe .line { animation: none; }
+    .pipe .line, .wire { animation: none; }
     .pops.live .pgrid i { animation: none; }
     .apppill.pulse { animation: none; }
     * { transition-duration: .01ms !important; }
@@ -586,6 +629,26 @@
     <div class="pipe pipe-mobile" id="p4"><div class="line"></div></div>
     <div class="pipe pipe-stream" id="p4s"><span class="ptag">streaming</span><div class="line"></div></div>
 
+    <section class="zone zone-laptop" aria-label="Web app in a browser">
+      <div class="apppill"><span class="knob"></span><span>Web app: online</span></div>
+      <div class="cards">
+        <article class="card" id="c-bsdk">
+          <span class="badge">Serving now</span>
+          <div class="chead"><h3>Browser SDK</h3><span class="fixed">always on</span></div>
+          <p class="role">Evaluated values only — never your rules</p>
+          <div class="chips"><span class="chip" id="chip-bdefaults">code-level defaults</span></div>
+          <div class="status"><i class="dot"></i><span class="slabel">healthy</span></div>
+        </article>
+        <div class="pipe" id="p7"><div class="line"></div></div>
+        <article class="card" id="c-bcache">
+          <span class="badge">Serving now</span>
+          <div class="chead"><h3>Browser cache</h3><button class="tog" role="switch" aria-checked="true" data-layer="bcache" aria-label="Browser cache"></button></div>
+          <p class="role">Last-known values, saved in the browser</p>
+          <div class="status"><i class="dot"></i><span class="slabel">healthy</span></div>
+        </article>
+      </div>
+    </section>
+
     <section class="zone zone-mobile" aria-label="Mobile app on an end-user device">
       <div class="apppill"><span class="knob"></span><span>Mobile app: online</span></div>
       <div class="cards">
@@ -605,6 +668,11 @@
         </article>
       </div>
     </section>
+
+    <svg class="wires" id="wires" aria-hidden="true">
+      <path class="wire" id="w-poll"></path><path class="wire-head" id="w-poll-h"></path>
+      <path class="wire" id="w-stream"></path><path class="wire-head" id="w-stream-h"></path>
+    </svg>
   </div>
 
   <div class="console">
@@ -635,14 +703,15 @@
   var $ = function (id) { return document.getElementById(id); };
   var cards = {
     east: $("c-east"), west: $("c-west"), poll: $("c-poll"),
-    relay: $("c-relay"), cache: $("c-cache"), sdk: $("c-sdk"), mcache: $("c-mcache"), msdk: $("c-msdk")
+    relay: $("c-relay"), cache: $("c-cache"), sdk: $("c-sdk"), mcache: $("c-mcache"), msdk: $("c-msdk"),
+    bcache: $("c-bcache"), bsdk: $("c-bsdk")
   };
-  var pipes = { p1: $("p1"), p2: $("p2"), p3: $("p3"), p3s: $("p3s"), p4: $("p4"), p4s: $("p4s"), p5: $("p5"), p6: $("p6") };
+  var pipes = { p1: $("p1"), p2: $("p2"), p3: $("p3"), p3s: $("p3s"), p4: $("p4"), p4s: $("p4s"), p5: $("p5"), p6: $("p6"), p7: $("p7") };
   var narrow = window.matchMedia("(max-width: 1279px)");
-  var keys = ["a", "b", "c", "east", "west", "poll", "relay", "cache", "mcache"];
+  var keys = ["a", "b", "c", "east", "west", "poll", "relay", "cache", "mcache", "bcache"];
   var azs = ["a", "b", "c"];
-  var fixed = ["sdk", "msdk"];
-  var caches = { cache: "sdk", mcache: "msdk" }; // cache -> what answers once it's gone
+  var fixed = ["sdk", "msdk", "bsdk"];
+  var caches = { cache: "sdk", mcache: "msdk", bcache: "bsdk" }; // cache -> what answers once it's gone
 
   // A layer state: true = up. "off" lists the layers taken down.
   function st(off) {
@@ -725,6 +794,7 @@
     var src = originUp ? region : "poll";
     var sb = !s.relay ? (s.cache ? "cache" : "sdk") : ldUp ? src : "relay";
     var sm = ldUp ? src : s.mcache ? "mcache" : "msdk";
+    var sl = ldUp ? src : s.bcache ? "bcache" : "bsdk";
     return {
       eastUp: eastUp,
       originUp: originUp,
@@ -732,8 +802,9 @@
       ldUp: ldUp,
       sb: sb,
       sm: sm,
-      serving: [sb, sm].concat(chan === "poll" ? ["poll"] : []),
-      cut: cuts(s, chan, originUp, sb, sm),
+      sl: sl,
+      serving: [sb, sm, sl].concat(chan === "poll" ? ["poll"] : []),
+      cut: cuts(s, chan, originUp, sb, sm, sl),
       // LaunchDarkly keeps the CDN current whenever a region is up
       idle: chan === "stream" ? ["p3", "p4"] : [],
       foHot: !eastUp && s.west
@@ -742,26 +813,57 @@
 
   // Streaming links carry state only while streaming serves; the CDN's links
   // to your apps stand by behind them. Stacked narrow, one link stands for delivery.
-  function cuts(s, chan, originUp, sb, sm) {
+  function cuts(s, chan, originUp, sb, sm, sl) {
     var streamOn = chan === "stream", ldUp = !!chan;
     if (narrow.matches) {
-      return { p6: !originUp, p3: !ldUp || !s.relay, p4: !ldUp, p2: !s.relay, p1: sb === "sdk", p5: sm === "msdk" };
+      return { p6: !originUp, p3: !ldUp || !s.relay, p4: !ldUp, p2: !s.relay, p1: sb === "sdk", p5: sm === "msdk", p7: sl === "bsdk" };
     }
     return {
       p3s: !streamOn || !s.relay, p4s: !streamOn,
       p6: !originUp || !s.poll, p3: !s.poll || !s.relay, p4: !s.poll,
-      p2: !s.relay, p1: sb === "sdk", p5: sm === "msdk"
+      p2: !s.relay, p1: sb === "sdk", p5: sm === "msdk", p7: sl === "bsdk"
     };
   }
 
-  function mobileNote(s, d) {
-    if (d.sm === "mcache") return !s.cache ?
-      " Mobile apps keep the values saved on the device, even across a restart." :
-      " Mobile apps evaluate from values saved on the device.";
-    if (d.sm === "msdk") return " Mobile apps with nothing saved on the device fall back to code-level defaults.";
-    if (d.sb !== d.sm) return " Mobile apps typically connect to LaunchDarkly directly, so they stay up to date.";
-    if (!s.mcache) return " Mobile apps refill their on-device cache as they connect.";
-    return "";
+  // What mobile and browser apps are doing, said once when they match.
+  function deviceNote(s, d) {
+    function kind(srv, ck) {
+      if (srv === ck) return "cache";
+      if (fixed.indexOf(srv) > -1) return "defaults";
+      if (d.sb !== srv) return "direct";
+      if (!s[ck]) return "refill";
+      return "";
+    }
+    function say(who, k, where) {
+      if (k === "cache") return !s.cache ?
+        " " + who + " keep the values saved " + where + ", even across a restart." :
+        " " + who + " evaluate from values saved " + where + ".";
+      if (k === "defaults") return " " + who + " with nothing saved " + where + " fall back to code-level defaults.";
+      if (k === "direct") return " " + who + " typically connect to LaunchDarkly directly, so they stay up to date.";
+      if (k === "refill") return " " + who + " refill their saved values as they connect.";
+      return "";
+    }
+    var m = kind(d.sm, "mcache"), b = kind(d.sl, "bcache");
+    if (m === b) return say("Mobile and browser apps", m, "on the device");
+    return say("Mobile apps", m, "on the device") + say("Browser apps", b, "in the browser");
+  }
+
+  // The laptop's two links: polling from the CDN's underside and streaming
+  // from LaunchDarkly, each bending under the phone and up into the laptop.
+  function drawWires() {
+    var arch = document.querySelector(".arch").getBoundingClientRect();
+    function r(sel) {
+      var b = document.querySelector(sel).getBoundingClientRect();
+      return { l: b.left - arch.left, r: b.right - arch.left, t: b.top - arch.top, b: b.bottom - arch.top, w: b.width };
+    }
+    var L = r(".zone-laptop"), P = r(".zone-mobile"), C = r(".zone-cdn"), D = r(".zone-ld");
+    var base = L.b + 14, y1 = P.b + 18, y2 = P.b + 38;
+    var xp = L.l + L.w * 0.62, xs = L.l + L.w * 0.38, xc = C.l + C.w / 2;
+    function head(x) { return "M" + (x - 5) + " " + (base + 8) + " L" + x + " " + (base + 2) + " L" + (x + 5) + " " + (base + 8); }
+    $("w-poll").setAttribute("d", "M" + xc + " " + C.b + " V" + y1 + " H" + xp + " V" + (base + 2));
+    $("w-poll-h").setAttribute("d", head(xp));
+    $("w-stream").setAttribute("d", "M" + D.l + " " + y2 + " H" + xs + " V" + (base + 2));
+    $("w-stream-h").setAttribute("d", head(xs));
   }
 
   function chanNote(s, d) {
@@ -778,28 +880,28 @@
         if (!azDown.length) base = d.chan === "stream" ? steps[0].story : "Region 1 is healthy, and server SDKs evaluate every decision locally, in-process.";
         else if (azDown.length === 2) base = azDown.join(" and ") + " are down. The last zone carries Region 1 on its own. Nothing changes for your app.";
         else base = azDown[0] + " is down. The other zones absorb the load inside Region 1. Nothing changes for your app.";
-        return base + chanNote(s, d) + tail + mobileNote(s, d);
+        return base + chanNote(s, d) + tail + deviceNote(s, d);
       case "west":
         base = (s.east ? "Every zone in Region 1 is down, so the region goes dark." : "Region 1 goes dark.") +
           " Region 2 takes over automatically — same state" + (d.chan === "stream" ? ", same stream." : ".");
-        return base + chanNote(s, d) + tail + mobileNote(s, d);
+        return base + chanNote(s, d) + tail + deviceNote(s, d);
       case "poll":
-        return steps[3].story + tail + mobileNote(s, d);
+        return steps[3].story + tail + deviceNote(s, d);
       case "relay":
         base = d.originUp ?
           "Streaming and polling are both down, so nothing can reach LaunchDarkly. Your Relay Proxy — inside your own network — keeps serving the latest state it received." :
           steps[4].story;
-        return base + mobileNote(s, d);
+        return base + deviceNote(s, d);
       case "cache":
         base = d.ldUp ?
           "The Relay Proxy is down. Server SDKs pointed at it keep evaluating from their local cache — no errors served — and pick up changes again when it’s back." :
           "LaunchDarkly is unreachable and the Relay Proxy is down. Running SDKs keep evaluating from their local cache — no network required, no errors served.";
-        return base + chanNote(s, d) + mobileNote(s, d);
+        return base + chanNote(s, d) + deviceNote(s, d);
       default:
         base = d.ldUp ?
           "The Relay Proxy is down and the backend restarts with an empty cache. Code-level defaults answer instantly until the proxy is back." :
           steps[6].story;
-        return base + chanNote(s, d) + mobileNote(s, d);
+        return base + chanNote(s, d) + deviceNote(s, d);
     }
   }
 
@@ -847,11 +949,18 @@
       chip.classList.toggle("hot", d.chan === "stream" && d.serving.indexOf(r) > -1);
     });
     $("chip-mdefaults").classList.toggle("hot", d.sm === "msdk");
+    $("chip-bdefaults").classList.toggle("hot", d.sl === "bsdk");
+    [["w-stream", d.chan !== "stream", false], ["w-poll", !state.poll, d.chan === "stream"]].forEach(function (w) {
+      [w[0], w[0] + "-h"].forEach(function (id) {
+        $(id).classList.toggle("cut", w[1]);
+        $(id).classList.toggle("idle", !w[1] && w[2]);
+      });
+    });
 
     var n = offCount(state);
     if (i > -1) {
       $("stepk").textContent = steps[i].k;
-      $("story").textContent = steps[i].story + mobileNote(state, d);
+      $("story").textContent = steps[i].story + deviceNote(state, d);
       $("next").textContent = steps[i].next;
     } else {
       var j = nextStep(state);
@@ -890,6 +999,8 @@
   });
   $("reset").addEventListener("click", function () { go(0); });
   narrow.addEventListener("change", render);
+  if (window.ResizeObserver) new ResizeObserver(drawWires).observe(document.querySelector(".arch"));
+  window.addEventListener("load", drawWires);
   // one dot per point of presence; staggered so the grid shimmers while serving
   for (var q = 0; q < 108; q++) {
     var dot = document.createElement("i");

@@ -18,10 +18,12 @@ run from the regions straight to your apps, past the CDN. — with a
 Region 1 down, both regions down (streaming goes with them; the CDN keeps
 serving), CDN down, Relay Proxy down, cold restart with nothing reachable. The app-status pill stays "online" through every step.
 Every layer also has its own on/off switch: each availability zone, both
-regions, CDN polling, the Relay Proxy,
+regions, CDN polling, the browser cache, the Relay Proxy,
 and the backend and on-device caches. A mobile-client row below the
 backend connects straight to LaunchDarkly, with values saved on the
-device that survive restarts.
+device that survive restarts. A laptop beside it runs the browser SDK with a
+browser cache; its streaming and polling lines bend under the phone, drawn
+as an SVG overlay that redraws on resize.
 
 ### ld-architecture-value.html
 The architectural-value story as four benefit scenes. One delivery diagram
