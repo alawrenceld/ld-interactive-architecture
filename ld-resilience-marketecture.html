@@ -76,7 +76,7 @@
   }
 
   .section {
-    max-width: 1240px;
+    max-width: 1440px;
     margin: 0 auto;
     padding: clamp(56px, 9vw, 120px) clamp(20px, 4vw, 48px);
   }
@@ -96,13 +96,17 @@
 
   /* ---------- architecture ---------- */
   .arch {
+    --pipe-w: clamp(26px, 3vw, 48px);
     display: grid;
-    grid-template-columns: minmax(0, 1fr) clamp(26px, 3.4vw, 52px) 320px;
+    grid-template-columns: minmax(0, 1fr) var(--pipe-w) 180px var(--pipe-w) 230px;
     row-gap: 16px;
   }
   .zone-infra { grid-column: 1; grid-row: 1; }
   #p3 { grid-column: 2; grid-row: 1; }
-  .zone-ld { grid-column: 3; grid-row: 1 / span 2; }
+  .zone-cdn { grid-column: 3; grid-row: 1 / span 2; display: flex; flex-direction: column; }
+  .zone-cdn .card.compact { margin: auto 0; }
+  #p6 { grid-column: 4; grid-row: 1 / span 2; }
+  .zone-ld { grid-column: 5; grid-row: 1 / span 2; }
   #p4 { grid-column: 2; grid-row: 2; }
   .zone-mobile { grid-column: 1; grid-row: 2; display: flex; flex-direction: column; }
   .zone-mobile .cards { display: flex; align-items: stretch; flex: 1 1 auto; }
@@ -113,7 +117,7 @@
     padding: 16px;
     position: relative;
   }
-  .zone > .zlabel {
+  .zone .zlabel {
     display: block;
     font-size: 13px;
     font-weight: 600;
@@ -127,12 +131,10 @@
   .zone-app { flex: 1 1 auto; display: flex; flex-direction: column; }
   .zone-app .cards { display: flex; align-items: stretch; flex: 1 1 auto; }
   .zone-ld { display: flex; flex-direction: column; }
-  .sublabel { font: 500 11px/1 "JetBrains Mono", monospace; color: var(--muted); margin: 4px 2px 8px; }
-  .card.compact { padding: 12px 14px; gap: 6px; margin-bottom: 8px; }
+  .card.compact { padding: 12px 14px; gap: 6px; margin-bottom: 8px; flex: 0 0 auto; }
   .card.compact h3 { font-size: 14px; }
   .card.compact .role { font-size: 12.5px; }
   .card.compact .status { padding-top: 2px; }
-  .card.compact + .sublabel { margin-top: 8px; }
 
   .apppill {
     display: inline-flex;
@@ -224,7 +226,7 @@
   .card.down .dot { background: var(--warn); }
 
   /* ---------- layer toggles ---------- */
-  .chead { display: flex; align-items: center; gap: 10px; }
+  .chead { display: flex; align-items: center; flex-wrap: wrap; gap: 4px 10px; }
   .tog {
     margin-left: auto;
     flex: 0 0 auto;
@@ -391,29 +393,27 @@
     background: repeating-linear-gradient(to right, var(--blue) 0 6px, transparent 6px 10px); }
 
   /* ---------- responsive ---------- */
-  @media (max-width: 1024px) {
+  @media (max-width: 1279px) {
     .arch { grid-template-columns: minmax(0, 1fr); row-gap: 0; }
-    .zone-infra, #p3, .zone-ld, #p4, .zone-mobile { grid-column: 1; }
-    #p3 { grid-row: 2; }
-    .zone-ld { grid-row: 3; }
-    #p4 { grid-row: 4; }
-    .zone-mobile { grid-row: 5; }
-    .zone-app .cards, .zone-mobile .cards { flex-direction: column; }
-    .infra-row { flex-direction: column; }
-    .pipe { flex: 0 0 30px; align-self: center; width: 2px; flex-direction: column; justify-content: center; }
+    .zone-infra, #p3, .zone-cdn, #p6, .zone-ld, #p4, .zone-mobile { grid-column: 1; }
+    .zone-ld { grid-row: 1; }
+    #p6 { grid-row: 2; }
+    .zone-cdn { grid-row: 3; }
+    #p3 { grid-row: 4; }
+    .zone-infra { grid-row: 5; }
+    .zone-mobile { grid-row: 6; margin-top: 16px; }
+    /* one column can't draw the CDN-to-mobile link beside the backend one */
+    #p4 { display: none; }
+    /* state flows down: proxy above cache above SDK */
+    .infra-row, .zone-app .cards, .zone-mobile .cards { flex-direction: column-reverse; }
+    .pipe { flex: 0 0 30px; align-self: center; width: 2px; flex-direction: column-reverse; justify-content: center; }
+    .arch > .pipe { height: 30px; justify-self: center; }
     .pipe .line { width: 2px; height: 100%; flex: 1;
-      background: repeating-linear-gradient(to top, var(--blue) 0 6px, transparent 6px 14px);
-      animation-name: flowv; }
-    @keyframes flowv { to { background-position: 0 -14px; } }
-    .pipe::before { transform: rotate(135deg); margin: 0 0 -2px; }
-    .pipe.cut .line { background: repeating-linear-gradient(to top, var(--down) 0 4px, transparent 4px 12px); }
-    #p3, #p4 { height: 30px; justify-self: center; }
-    /* the mobile row sits below LaunchDarkly, so its link points down */
-    #p4 { flex-direction: column-reverse; }
-    #p4 .line { background: repeating-linear-gradient(to bottom, var(--blue) 0 6px, transparent 6px 14px); animation-name: flowd; }
+      background: repeating-linear-gradient(to bottom, var(--blue) 0 6px, transparent 6px 14px);
+      animation-name: flowd; }
     @keyframes flowd { to { background-position: 0 14px; } }
-    #p4::before { transform: rotate(-45deg); margin: -2px 0 0; }
-    #p4.cut .line { background: repeating-linear-gradient(to bottom, var(--down) 0 4px, transparent 4px 12px); }
+    .pipe::before { transform: rotate(-45deg); margin: -2px 0 0; }
+    .pipe.cut .line { background: repeating-linear-gradient(to bottom, var(--down) 0 4px, transparent 4px 12px); }
     .console { grid-template-columns: 1fr; }
     .controls { justify-content: flex-start; }
   }
@@ -460,7 +460,7 @@
             </div>
           </section>
           <div class="pipe" id="p2"><div class="line"></div></div>
-          <article class="card" id="c-relay" style="flex:0 1 240px">
+          <article class="card" id="c-relay" style="flex:0 1 200px">
             <span class="badge">Serving now</span>
             <div class="chead"><h3>Relay Proxy</h3><button class="tog" role="switch" aria-checked="true" data-layer="relay" aria-label="Relay Proxy"></button></div>
             <p class="role">Optional. Runs in your network with the latest LaunchDarkly state — serves even fully disconnected</p>
@@ -472,26 +472,31 @@
 
     <div class="pipe pipe-main" id="p3"><div class="line"></div></div>
 
-    <section class="zone zone-ld" aria-label="LaunchDarkly cloud">
-      <span class="zlabel">LaunchDarkly</span>
-      <span class="sublabel">delivery</span>
-      <article class="card compact" id="c-stream">
-        <span class="badge">Serving now</span>
-        <div class="chead"><h3>Streaming</h3><button class="tog" role="switch" aria-checked="true" data-layer="stream" aria-label="Streaming"></button></div>
-        <p class="role">Pushes each change the moment it’s made</p>
-        <div class="status"><i class="dot"></i><span class="slabel">healthy</span></div>
-      </article>
+    <section class="zone zone-cdn" aria-label="LaunchDarkly CDN">
+      <span class="zlabel">LaunchDarkly CDN</span>
       <article class="card compact" id="c-poll">
         <span class="badge">Serving now</span>
-        <div class="chead"><h3>Polling · CDN</h3><button class="tog" role="switch" aria-checked="true" data-layer="poll" aria-label="Polling through the CDN"></button></div>
+        <div class="chead"><h3>Polling</h3><button class="tog" role="switch" aria-checked="true" data-layer="poll" aria-label="Polling"></button></div>
         <p class="role">Serves flag data from the edge, for polling and fast server starts</p>
         <div class="status"><i class="dot"></i><span class="slabel">healthy</span></div>
       </article>
-      <span class="sublabel">origin regions</span>
+    </section>
+
+    <div class="pipe pipe-mid" id="p6"><div class="line"></div></div>
+
+    <section class="zone zone-ld" aria-label="LaunchDarkly">
+      <span class="zlabel">LaunchDarkly</span>
+      <article class="card compact" id="c-stream">
+        <span class="badge">Serving now</span>
+        <div class="chead"><h3>Streaming</h3><button class="tog" role="switch" aria-checked="true" data-layer="stream" aria-label="Streaming"></button></div>
+        <p class="role">Runs inside every region and zone, and pushes each change the moment it’s made</p>
+        <div class="status"><i class="dot"></i><span class="slabel">healthy</span></div>
+      </article>
       <article class="card" id="c-east" style="flex:0 0 auto">
         <span class="badge">Serving now</span>
         <div class="chead"><h3>Region 1</h3><button class="tog" role="switch" aria-checked="true" data-layer="east" aria-label="Region 1"></button></div>
         <p class="role">Primary region</p>
+        <div class="chips"><span class="chip" id="chip-s-east">streaming</span></div>
         <div class="azrow">
           <button class="az" id="az-a" data-layer="a" role="switch" aria-checked="true" aria-label="Availability zone A">AZ-a</button>
           <button class="az" id="az-b" data-layer="b" role="switch" aria-checked="true" aria-label="Availability zone B">AZ-b</button>
@@ -504,6 +509,7 @@
         <span class="badge">Serving now</span>
         <div class="chead"><h3>Region 2</h3><button class="tog" role="switch" aria-checked="true" data-layer="west" aria-label="Region 2"></button></div>
         <p class="role">Warm failover region</p>
+        <div class="chips"><span class="chip" id="chip-s-west">streaming</span></div>
         <div class="status"><i class="dot"></i><span class="slabel">healthy</span></div>
       </article>
     </section>
@@ -565,7 +571,7 @@
     east: $("c-east"), west: $("c-west"), stream: $("c-stream"), poll: $("c-poll"),
     relay: $("c-relay"), cache: $("c-cache"), sdk: $("c-sdk"), mcache: $("c-mcache"), msdk: $("c-msdk")
   };
-  var pipes = { p1: $("p1"), p2: $("p2"), p3: $("p3"), p4: $("p4"), p5: $("p5") };
+  var pipes = { p1: $("p1"), p2: $("p2"), p3: $("p3"), p4: $("p4"), p5: $("p5"), p6: $("p6") };
   var keys = ["a", "b", "c", "east", "west", "stream", "poll", "relay", "cache", "mcache"];
   var azs = ["a", "b", "c"];
   var fixed = ["sdk", "msdk"];
@@ -657,7 +663,7 @@
       sb: sb,
       sm: sm,
       serving: [sb, sm].concat(chan ? [chan] : []),
-      cut: { p4: !ldUp, p3: !ldUp || !s.relay, p2: !s.relay, p1: sb === "sdk", p5: sm === "msdk" },
+      cut: { p6: !ldUp, p4: !ldUp, p3: !ldUp || !s.relay, p2: !s.relay, p1: sb === "sdk", p5: sm === "msdk" },
       foHot: !eastUp && s.west
     };
   }
@@ -745,6 +751,9 @@
     ["p3", "p4"].forEach(function (k) { pipes[k].classList.toggle("poll", d.chan === "poll"); });
     $("fo").classList.toggle("hot", d.foHot);
     $("chip-defaults").classList.toggle("hot", d.sb === "sdk");
+    ["east", "west"].forEach(function (r) {
+      $("chip-s-" + r).classList.toggle("hot", d.chan === "stream" && d.serving.indexOf(r) > -1);
+    });
     $("chip-mdefaults").classList.toggle("hot", d.sm === "msdk");
 
     var n = offCount(state);

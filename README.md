@@ -10,13 +10,14 @@ static server.
 
 ### ld-resilience-marketecture.html
 The resilience story as a clickable failure ladder. Layered marketecture —
-SDK + code defaults, local cache, Relay Proxy, LaunchDarkly cloud
-(Region 1 primary with AZ chips, Region 2 warm failover) — with a
+SDK + code defaults, local cache, Relay Proxy, the LaunchDarkly CDN
+(polling), and LaunchDarkly itself (streaming inside Region 1 primary with
+AZ chips, and Region 2 warm failover) — with a
 "break the next thing" stepper that walks seven states: healthy, AZ down, streaming down,
 Region 1 down, both regions down, Relay Proxy down, cold restart with
 nothing reachable. The app-status pill stays "online" through every step.
 Every layer also has its own on/off switch: each availability zone, both
-regions, the streaming and CDN polling delivery layers, the Relay Proxy,
+regions, streaming, CDN polling, the Relay Proxy,
 and the backend and on-device caches. A mobile-client row below the
 backend connects straight to LaunchDarkly, with values saved on the
 device that survive restarts.
@@ -39,7 +40,7 @@ Fast start (~25 ms), Fast changes (<200 ms, 138-byte delta), Failover built in
 - Vanilla JS only; state machines live at the bottom of each file in the
   scenes/steps arrays — copy edits happen there and in the markup, nothing
   is generated.
-- Responsive: zones stack and pipes rotate vertical below ~1024px on the
+- Responsive: zones stack and pipes rotate vertical below ~1280px on the
   resilience page and ~900px on the value page.
 
 ## Status / before production use
