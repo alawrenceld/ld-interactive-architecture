@@ -604,7 +604,7 @@
     },
     {
       k: "failure 2 of 6 — streaming",
-      story: "Streaming goes down. SDKs keep serving the last state they received while they reconnect, and SDKs on LaunchDarkly’s newer data system fall back to polling through the CDN. Changes arrive on the next poll instead of the moment they’re made.",
+      story: "Streaming goes down. SDKs fall back to polling through the CDN automatically and keep serving the whole time. Changes arrive on the next poll instead of the moment they’re made.",
       state: st(["a", "stream"]),
       next: "Take all of Region 1 down"
     },
@@ -673,7 +673,7 @@
   }
 
   function chanNote(s, d) {
-    if (d.chan === "poll") return " Streaming is down. SDKs keep serving the last state they received while they reconnect, and SDKs on LaunchDarkly’s newer data system fall back to polling through the CDN — changes arrive on the next poll instead of the moment they’re made.";
+    if (d.chan === "poll") return " Streaming is down, so SDKs fall back to polling through the CDN — changes arrive on the next poll instead of the moment they’re made.";
     if (d.chan === "stream" && !s.poll) return " The CDN is down. Running SDKs don’t notice, and new ones initialize from the stream instead.";
     return "";
   }
