@@ -788,14 +788,14 @@
   <div id="panel-start" role="tabpanel" aria-labelledby="tab-start" hidden>
   <div class="lede">
     <h1>Your app starts fast, then stays current.</h1>
-    <p>As your app starts, the SDK fetches complete flag state from the nearest CDN edge, then switches to a live stream that picks up exactly where the fetch left off.</p>
+    <p>As your backend starts, its server-side SDK fetches complete flag state from the nearest CDN edge, then switches to a live stream that picks up exactly where the fetch left off.</p>
   </div>
 
   <div class="sarch" aria-label="How an SDK starts up">
     <section class="zone s-app" aria-label="Your app">
       <span class="zlabel">Your app</span>
       <article class="card" id="s-sdk">
-        <div class="chead"><h3>SDK</h3></div>
+        <div class="chead"><h3>Server SDK</h3></div>
         <p class="role">Runs inside your app</p>
         <dl class="sread">
           <div><dt>flag data</dt><dd id="s-data">none yet</dd></div>
@@ -822,7 +822,7 @@
       <span class="zlabel">LaunchDarkly</span>
       <article class="card" id="s-region">
         <div class="chead"><h3>Region</h3></div>
-        <p class="role">Keeps the CDN current, and streams each change the moment it’s made</p>
+        <p class="role">Streaming runs here, and pushes each change the moment it’s made</p>
         <div class="chips"><span class="chip" id="s-chip">streaming</span></div>
       </article>
     </section>
@@ -830,7 +830,7 @@
 
   <div class="console">
     <div class="ladder" aria-hidden="true">
-      <i id="s-l0"></i><i id="s-l1"></i><i id="s-l2"></i><i id="s-l3"></i><i id="s-l4"></i>
+      <i id="s-l0"></i><i id="s-l1"></i><i id="s-l2"></i><i id="s-l3"></i><i id="s-l4"></i><i id="s-l5"></i>
     </div>
     <p class="narration" aria-live="polite">
       <span class="step-k" id="s-stepk"></span>
@@ -1202,35 +1202,42 @@
       k: "app boots",
       story: "Your app starts. Until the SDK has flag data, every evaluation returns the code-level default you passed in — never an error.",
       data: "none yet", eval: "code defaults", conn: "none",
-      live: [], hot: [], pkt: null, tpoll: "polling", tstream: "streaming",
+      live: [], hot: [], chip: false, pkt: null, tpoll: "polling", tstream: "streaming",
       next: "Fetch from the CDN"
     },
     {
-      k: "step 1 of 4 — fetch",
+      k: "step 1 of 5 — fetch",
       story: "The SDK asks the nearest CDN edge for complete flag state. The request travels to the edge, not across the world.",
       data: "requesting…", eval: "code defaults", conn: "fetching from the CDN",
-      live: ["s-ppoll"], hot: ["s-cdncard"], pkt: ["s-kpoll", "right"], tpoll: "request", tstream: "streaming",
+      live: ["s-ppoll"], hot: ["s-cdncard"], chip: false, pkt: ["s-kpoll", "right"], tpoll: "request", tstream: "streaming",
       next: "Receive the payload"
     },
     {
-      k: "step 2 of 4 — ready",
+      k: "step 2 of 5 — ready",
       story: "The edge answers with complete, ready-to-run state in about 25 ms. The SDK is ready and evaluates every flag locally, in-process.",
       data: "complete · v41", eval: "local, in-process", conn: "fetched from the CDN",
-      live: ["s-ppoll"], hot: ["s-sdk"], pkt: ["s-kpoll", "left"], tpoll: "full state", tstream: "streaming",
+      live: ["s-ppoll"], hot: ["s-cdncard", "s-sdk"], chip: false, pkt: ["s-kpoll", "left"], tpoll: "full state", tstream: "streaming",
       next: "Open the stream"
     },
     {
-      k: "step 3 of 4 — connect",
-      story: "The SDK opens a streaming connection to a LaunchDarkly region and says which version it already has, so nothing is sent twice.",
+      k: "step 3 of 5 — connect",
+      story: "The SDK opens a streaming connection to a LaunchDarkly region and says which version it already has.",
       data: "complete · v41", eval: "local, in-process", conn: "connecting…",
-      live: ["s-pstream"], hot: ["s-region"], pkt: ["s-kstream", "right"], tpoll: "polling", tstream: "connect · have v41",
+      live: ["s-pstream"], hot: ["s-region"], chip: false, pkt: ["s-kstream", "right"], tpoll: "polling", tstream: "connect · have v41",
+      next: "Catch up"
+    },
+    {
+      k: "step 4 of 5 — catch up",
+      story: "The region catches the SDK up from v41, usually by sending just the changes since. Nothing made during startup is missed, even if the edge was a little behind.",
+      data: "current · v42", eval: "local, in-process", conn: "streaming",
+      live: ["s-pstream"], hot: ["s-region", "s-sdk"], chip: true, pkt: ["s-kstream", "left"], tpoll: "polling", tstream: "changes since v41",
       next: "Make a flag change"
     },
     {
-      k: "step 4 of 4 — live",
-      story: "The stream sends only what changed since v41, so nothing made during startup is missed. From here, each change lands the moment it’s made.",
-      data: "live · v42", eval: "local, in-process", conn: "streaming",
-      live: ["s-pstream"], hot: ["s-sdk", "s-region"], pkt: ["s-kstream", "loop"], tpoll: "polling", tstream: "Δ change · v42",
+      k: "step 5 of 5 — live",
+      story: "From here, each flag change lands the moment it’s made, as a small update instead of a fresh download.",
+      data: "live · v43", eval: "local, in-process", conn: "streaming",
+      live: ["s-pstream"], hot: ["s-sdk", "s-region"], chip: true, pkt: ["s-kstream", "loop"], tpoll: "polling", tstream: "Δ change · v43",
       next: "Start over"
     }
   ];
@@ -1242,7 +1249,7 @@
     var s = steps[i];
     links.forEach(function (id) { $(id).classList.toggle("idle", s.live.indexOf(id) < 0); });
     cards.forEach(function (id) { $(id).classList.toggle("serving", s.hot.indexOf(id) > -1); });
-    $("s-chip").classList.toggle("hot", s.live.indexOf("s-pstream") > -1);
+    $("s-chip").classList.toggle("hot", s.chip);
     ["s-kpoll", "s-kstream"].forEach(function (id) {
       var el = $(id);
       el.className = "pkt";
@@ -1256,7 +1263,8 @@
     $("s-stepk").textContent = s.k;
     $("s-story").textContent = s.story;
     $("s-next").textContent = s.next;
-    $("s-reset").style.visibility = i === 0 ? "hidden" : "visible";
+    // the last step's main button already starts over
+    $("s-reset").style.visibility = i === 0 || i === steps.length - 1 ? "hidden" : "visible";
     for (var m = 0; m < steps.length; m++) { $("s-l" + m).classList.toggle("on", m <= i); }
   }
 

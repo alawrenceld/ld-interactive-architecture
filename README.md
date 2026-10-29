@@ -25,10 +25,10 @@ device that survive restarts. A laptop beside it runs the browser SDK with a
 browser cache; its streaming and polling lines run straight behind the phone, drawn
 as an SVG overlay that redraws on resize.
 
-A second tab, "Starts fast", steps through an SDK starting up: it boots on
-code defaults, fetches complete flag state from the nearest CDN edge, opens a
-stream that says which version it already has, and then receives only the
-changes since. The Relay Proxy is left out of this view. Link to it directly
+A second tab, "Starts fast", steps through a server-side SDK starting up: it
+boots on code defaults, fetches complete flag state from the nearest CDN edge,
+opens a stream that says which version it already has, catches up (usually
+just the changes since), and then receives each new change live. The Relay Proxy is left out of this view. Link to it directly
 with `#startup`.
 
 ### ld-architecture-value.html
