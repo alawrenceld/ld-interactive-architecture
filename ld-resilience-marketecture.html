@@ -126,20 +126,24 @@
   .pops.down .pgrid i { background: var(--down); opacity: .45; }
   #p6 { grid-column: 4; grid-row: 2 / span 2; }
   .zone-ld { grid-column: 5; grid-row: 1 / span 4; }
-  #p4 { grid-column: 2; grid-row: 3; }
-  #p4s { grid-column: 2 / span 3; grid-row: 4; }
+  /* devices sit at the left: laptop (base flush with the edge), then the phone.
+     The phone's links reach back across the gap to its right edge. */
+  .arch { --laptop-x: 38px; --phone-x: calc(38px + 424px + 38px + 16px); --phone-w: 160px; }
+  #p4 { grid-column: 1 / span 2; grid-row: 3; margin-left: calc(var(--phone-x) + var(--phone-w)); }
+  #p4s { grid-column: 1 / span 4; grid-row: 4; margin-left: calc(var(--phone-x) + var(--phone-w)); }
   .zone-mobile { grid-column: 1; grid-row: 3 / span 2; margin-top: 16px; display: flex; flex-direction: column; }
   .zone-mobile .cards { display: flex; flex-direction: column; flex: 1 1 auto; }
 
   /* ---------- the mobile app, drawn as a phone ---------- */
   .zone.zone-mobile {
-    justify-self: end;
-    width: 200px;
+    justify-self: start;
+    margin-left: var(--phone-x);
+    width: var(--phone-w); /* phone-shaped at the laptop's height */
     height: 279px; /* the laptop's screen (424 × 10/16) plus its 14px base */
     align-self: center;
     border: 2px solid var(--border-strong);
     border-radius: 24px;
-    padding: 8px 10px 8px;
+    padding: 8px 7px 8px;
     box-shadow: var(--shadow-md);
   }
   .zone-mobile::before, .zone-mobile::after {
@@ -156,7 +160,7 @@
   .zone-mobile .apppill .knob { width: 14px; height: 14px; }
   .zone-mobile .apppill .knob::after { inset: 4.5px; }
   .zone-mobile .cards { flex: 0 0 auto; }
-  .zone-mobile .card { flex: 0 0 auto; padding: 8px 10px; gap: 3px; }
+  .zone-mobile .card { flex: 0 0 auto; padding: 7px 8px; gap: 3px; }
   .zone-mobile .card h3 { font-size: 13px; }
   .zone-mobile .card .role { font-size: 11.5px; line-height: 1.35; }
   .zone-mobile .card .status { padding-top: 0; font-size: 10.5px; }
@@ -191,10 +195,10 @@
   /* ---------- the web app, drawn as a laptop ---------- */
   .zone.zone-laptop {
     grid-column: 1; grid-row: 3 / span 2;
-    justify-self: end; align-self: center;
+    justify-self: start; align-self: center;
     width: 424px;
     aspect-ratio: 16 / 10; /* a laptop screen */
-    margin: 16px calc(200px + 48px) 14px 0; /* left of the phone, room for the base */
+    margin: 16px 0 14px var(--laptop-x); /* room for the base on both sides */
     border: 2px solid var(--border-strong);
     border-radius: 14px;
     padding: 10px 12px 12px;
@@ -511,7 +515,7 @@
     .zone-cdn { grid-row: 3; }
     #p3 { grid-row: 4; }
     .zone-infra { grid-row: 5; }
-    .zone.zone-mobile { grid-row: 6; margin-top: 16px; justify-self: center; }
+    .zone.zone-mobile { grid-row: 6; margin: 16px 0 0; justify-self: center; }
     .zone.zone-laptop { grid-row: 7; justify-self: center; margin: 32px 0 14px; width: min(424px, 100%); aspect-ratio: auto; }
     .zone-laptop .cards { flex-direction: column-reverse; }
     .zone-laptop::after { left: -6px; right: -6px; }
@@ -658,12 +662,12 @@
     </section>
 
     <section class="zone zone-mobile" aria-label="Mobile app on an end-user device">
-      <div class="apppill"><span class="knob"></span><span>Mobile app: online</span></div>
+      <div class="apppill"><span class="knob"></span><span>App online</span></div>
       <div class="cards">
         <article class="card" id="c-msdk">
           <span class="badge">Serving now</span>
           <div class="chead"><h3>Mobile SDK</h3><span class="fixed">always on</span></div>
-          <div class="chips"><span class="chip" id="chip-mdefaults">code-level defaults</span></div>
+          <div class="chips"><span class="chip" id="chip-mdefaults">code defaults</span></div>
           <div class="status"><i class="dot"></i><span class="slabel">healthy</span></div>
         </article>
         <div class="pipe" id="p5"><div class="line"></div></div>
