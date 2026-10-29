@@ -21,6 +21,7 @@
     --lime: #DDFF46;
     --lime-edge: #B9D82A;
     --warn: #FF9D29;
+    --ok: #1FA463;
     --down: #A2A2AC;
     --shadow-sm: 0 1px 2px rgba(25,25,25,.06);
     --shadow-md: 0 2px 4px rgba(25,25,25,.05), 0 12px 28px rgba(25,25,25,.08);
@@ -43,6 +44,7 @@
       --blue-press: #8193FF;
       --blue-ghost: rgba(94,117,255,.14);
       --lime-edge: #DDFF46;
+      --ok: #3DD68C;
       --down: #6B6B74;
       --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
       --shadow-md: 0 2px 4px rgba(0,0,0,.3), 0 12px 28px rgba(0,0,0,.45);
@@ -61,6 +63,7 @@
     --blue-press: #8193FF;
     --blue-ghost: rgba(94,117,255,.14);
     --lime-edge: #DDFF46;
+    --ok: #3DD68C;
     --down: #6B6B74;
     --shadow-sm: 0 1px 2px rgba(0,0,0,.4);
     --shadow-md: 0 2px 4px rgba(0,0,0,.3), 0 12px 28px rgba(0,0,0,.45);
@@ -95,21 +98,32 @@
   .lede strong { color: var(--ink); font-weight: 600; }
 
   /* ---------- architecture ---------- */
+  /* Streaming runs from the regions straight to your apps (rows 1 and 4),
+     past the CDN, which sits in rows 2-3 and serves polling. */
   .arch {
     --pipe-w: clamp(26px, 3vw, 48px);
     display: grid;
     grid-template-columns: minmax(0, 1fr) var(--pipe-w) 180px var(--pipe-w) 230px;
-    row-gap: 16px;
   }
-  .zone-infra { grid-column: 1; grid-row: 1; }
-  #p3 { grid-column: 2; grid-row: 1; }
-  .zone-cdn { grid-column: 3; grid-row: 1 / span 2; display: flex; flex-direction: column; }
+  .zone-infra { grid-column: 1; grid-row: 1 / span 2; }
+  #p3s { grid-column: 2 / span 3; grid-row: 1; }
+  #p3 { grid-column: 2; grid-row: 2; }
+  .zone-cdn { grid-column: 3; grid-row: 2 / span 2; margin: 12px 0; display: flex; flex-direction: column; }
   .zone-cdn .card.compact { margin: auto 0; }
-  #p6 { grid-column: 4; grid-row: 1 / span 2; }
-  .zone-ld { grid-column: 5; grid-row: 1 / span 2; }
-  #p4 { grid-column: 2; grid-row: 2; }
-  .zone-mobile { grid-column: 1; grid-row: 2; display: flex; flex-direction: column; }
+  #p6 { grid-column: 4; grid-row: 2 / span 2; }
+  .zone-ld { grid-column: 5; grid-row: 1 / span 4; }
+  #p4 { grid-column: 2; grid-row: 3; }
+  #p4s { grid-column: 2 / span 3; grid-row: 4; }
+  .zone-mobile { grid-column: 1; grid-row: 3 / span 2; margin-top: 16px; display: flex; flex-direction: column; }
   .zone-mobile .cards { display: flex; align-items: stretch; flex: 1 1 auto; }
+  .ptag {
+    position: absolute;
+    left: 50%; top: calc(50% - 20px);
+    transform: translateX(-50%);
+    font: 500 11px/1 "JetBrains Mono", monospace;
+    color: var(--muted);
+    white-space: nowrap;
+  }
   .zone {
     border: 1px solid var(--border);
     border-radius: 16px;
@@ -194,7 +208,7 @@
     font-size: 11.5px;
     color: var(--muted);
   }
-  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); flex: 0 0 auto;
+  .dot { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); flex: 0 0 auto;
          transition: background .2s cubic-bezier(0.2,0,0,1); }
 
   .card.serving {
@@ -281,6 +295,10 @@
     transition: background .2s cubic-bezier(0.2,0,0,1), color .2s cubic-bezier(0.2,0,0,1);
   }
   .chip.hot { background: var(--lime); color: #191919; font-weight: 600; }
+  /* streaming runs inside each region; either chip switches it */
+  .schip { font: 500 12px/1.4 "Inter", sans-serif; border: 1px solid transparent; min-height: 24px; cursor: pointer; }
+  .schip.down { background: transparent; border: 1px dashed #E5484D; color: #E5484D; text-decoration: line-through; }
+  .schip[aria-disabled="true"] { cursor: default; }
 
   /* ---------- pipes ---------- */
   .pipe {
@@ -308,8 +326,8 @@
   @keyframes flow { to { background-position: -14px 0; } }
   .pipe.cut .line { animation: none; background: repeating-linear-gradient(to left, var(--down) 0 4px, transparent 4px 12px); opacity: .45; }
   .pipe.cut::before { border-color: var(--down); opacity: .45; }
-  .pipe.poll .line { animation-duration: 2.8s; opacity: .45; }
-  .pipe.poll::before { opacity: .45; }
+  .pipe.idle .line { animation: none; opacity: .3; }
+  .pipe.idle::before { opacity: .3; }
 
   /* failover link inside LD zone */
   .failover {
@@ -387,9 +405,9 @@
   }
   .legend span { display: inline-flex; align-items: center; gap: 7px; }
   .legend .k-serve { width: 10px; height: 10px; border-radius: 3px; background: var(--lime); border: 1px solid var(--lime-edge); }
-  .legend .k-ok { width: 8px; height: 8px; border-radius: 50%; background: var(--blue); }
+  .legend .k-ok { width: 8px; height: 8px; border-radius: 50%; background: var(--ok); }
   .legend .k-down { width: 8px; height: 8px; border-radius: 50%; background: var(--warn); }
-  .legend .k-poll { width: 18px; height: 2px; opacity: .45;
+  .legend .k-idle { width: 18px; height: 2px; opacity: .3;
     background: repeating-linear-gradient(to right, var(--blue) 0 6px, transparent 6px 10px); }
 
   /* ---------- responsive ---------- */
@@ -402,6 +420,9 @@
     #p3 { grid-row: 4; }
     .zone-infra { grid-row: 5; }
     .zone-mobile { grid-row: 6; margin-top: 16px; }
+    .zone-cdn { margin: 0; }
+    /* one column has no room for a bypass, so its links stand for delivery as a whole */
+    #p3s, #p4s { display: none; }
     /* one column can't draw the CDN-to-mobile link beside the backend one */
     #p4 { display: none; }
     /* state flows down: proxy above cache above SDK */
@@ -470,6 +491,7 @@
       </div>
     </section>
 
+    <div class="pipe pipe-stream" id="p3s"><span class="ptag">streaming</span><div class="line"></div></div>
     <div class="pipe pipe-main" id="p3"><div class="line"></div></div>
 
     <section class="zone zone-cdn" aria-label="LaunchDarkly CDN">
@@ -486,17 +508,11 @@
 
     <section class="zone zone-ld" aria-label="LaunchDarkly">
       <span class="zlabel">LaunchDarkly</span>
-      <article class="card compact" id="c-stream">
-        <span class="badge">Serving now</span>
-        <div class="chead"><h3>Streaming</h3><button class="tog" role="switch" aria-checked="true" data-layer="stream" aria-label="Streaming"></button></div>
-        <p class="role">Runs inside every region and zone, and pushes each change the moment it’s made</p>
-        <div class="status"><i class="dot"></i><span class="slabel">healthy</span></div>
-      </article>
       <article class="card" id="c-east" style="flex:0 0 auto">
         <span class="badge">Serving now</span>
         <div class="chead"><h3>Region 1</h3><button class="tog" role="switch" aria-checked="true" data-layer="east" aria-label="Region 1"></button></div>
         <p class="role">Primary region</p>
-        <div class="chips"><span class="chip" id="chip-s-east">streaming</span></div>
+        <div class="chips"><button class="chip schip" id="chip-s-east" data-layer="stream" role="switch" aria-checked="true" aria-label="Streaming">streaming</button></div>
         <div class="azrow">
           <button class="az" id="az-a" data-layer="a" role="switch" aria-checked="true" aria-label="Availability zone A">AZ-a</button>
           <button class="az" id="az-b" data-layer="b" role="switch" aria-checked="true" aria-label="Availability zone B">AZ-b</button>
@@ -509,12 +525,13 @@
         <span class="badge">Serving now</span>
         <div class="chead"><h3>Region 2</h3><button class="tog" role="switch" aria-checked="true" data-layer="west" aria-label="Region 2"></button></div>
         <p class="role">Warm failover region</p>
-        <div class="chips"><span class="chip" id="chip-s-west">streaming</span></div>
+        <div class="chips"><button class="chip schip" id="chip-s-west" data-layer="stream" role="switch" aria-checked="true" aria-label="Streaming">streaming</button></div>
         <div class="status"><i class="dot"></i><span class="slabel">healthy</span></div>
       </article>
     </section>
 
     <div class="pipe pipe-mobile" id="p4"><div class="line"></div></div>
+    <div class="pipe pipe-stream" id="p4s"><span class="ptag">streaming</span><div class="line"></div></div>
 
     <section class="zone zone-mobile" aria-label="End-user devices">
       <span class="zlabel">End-user devices</span>
@@ -559,7 +576,7 @@
     <span><i class="k-serve"></i>serving your app</span>
     <span><i class="k-ok"></i>healthy</span>
     <span><i class="k-down"></i>unreachable</span>
-    <span><i class="k-poll"></i>faded link: polling instead of streaming</span>
+    <span><i class="k-idle"></i>dimmed link: standing by</span>
   </div>
 </main>
 
@@ -568,10 +585,11 @@
   "use strict";
   var $ = function (id) { return document.getElementById(id); };
   var cards = {
-    east: $("c-east"), west: $("c-west"), stream: $("c-stream"), poll: $("c-poll"),
+    east: $("c-east"), west: $("c-west"), poll: $("c-poll"),
     relay: $("c-relay"), cache: $("c-cache"), sdk: $("c-sdk"), mcache: $("c-mcache"), msdk: $("c-msdk")
   };
-  var pipes = { p1: $("p1"), p2: $("p2"), p3: $("p3"), p4: $("p4"), p5: $("p5"), p6: $("p6") };
+  var pipes = { p1: $("p1"), p2: $("p2"), p3: $("p3"), p3s: $("p3s"), p4: $("p4"), p4s: $("p4s"), p5: $("p5"), p6: $("p6") };
+  var narrow = window.matchMedia("(max-width: 1279px)");
   var keys = ["a", "b", "c", "east", "west", "stream", "poll", "relay", "cache", "mcache"];
   var azs = ["a", "b", "c"];
   var fixed = ["sdk", "msdk"];
@@ -663,8 +681,23 @@
       sb: sb,
       sm: sm,
       serving: [sb, sm].concat(chan ? [chan] : []),
-      cut: { p6: !ldUp, p4: !ldUp, p3: !ldUp || !s.relay, p2: !s.relay, p1: sb === "sdk", p5: sm === "msdk" },
+      cut: cuts(s, chan, originUp, sb, sm),
+      idle: chan === "stream" ? ["p3", "p4", "p6"] : [],
       foHot: !eastUp && s.west
+    };
+  }
+
+  // Streaming links carry state only while streaming serves; polling links
+  // stand by behind them. Stacked narrow, one link stands for delivery.
+  function cuts(s, chan, originUp, sb, sm) {
+    var streamOn = chan === "stream", poll = originUp && s.poll, ldUp = !!chan;
+    if (narrow.matches) {
+      return { p6: !ldUp, p3: !ldUp || !s.relay, p4: !ldUp, p2: !s.relay, p1: sb === "sdk", p5: sm === "msdk" };
+    }
+    return {
+      p3s: !streamOn || !s.relay, p4s: !streamOn,
+      p6: !poll, p3: !poll || !s.relay, p4: !poll,
+      p2: !s.relay, p1: sb === "sdk", p5: sm === "msdk"
     };
   }
 
@@ -735,7 +768,7 @@
       var label;
       if (down) label = !caches[k] ? "unreachable" : d.serving.indexOf(caches[k]) > -1 ? "cleared" : "cleared, refilling";
       else if (on) label = "serving";
-      else label = (k === "stream" || k === "poll") && d.originUp ? "standing by" : (k === "stream" || k === "poll") ? "idle" : "healthy";
+      else label = k === "poll" ? (d.originUp ? "standing by" : "idle") : "healthy";
       el.classList.toggle("down", down);
       el.classList.toggle("serving", on);
       el.querySelector(".slabel").textContent = label;
@@ -747,12 +780,18 @@
       $("az-" + z).setAttribute("aria-checked", state[z] ? "true" : "false");
       $("az-" + z).setAttribute("aria-disabled", state.east ? "false" : "true");
     });
-    Object.keys(pipes).forEach(function (k) { pipes[k].classList.toggle("cut", d.cut[k]); });
-    ["p3", "p4"].forEach(function (k) { pipes[k].classList.toggle("poll", d.chan === "poll"); });
+    Object.keys(pipes).forEach(function (k) {
+      pipes[k].classList.toggle("cut", !!d.cut[k]);
+      pipes[k].classList.toggle("idle", !d.cut[k] && !narrow.matches && d.idle.indexOf(k) > -1);
+    });
     $("fo").classList.toggle("hot", d.foHot);
     $("chip-defaults").classList.toggle("hot", d.sb === "sdk");
     ["east", "west"].forEach(function (r) {
-      $("chip-s-" + r).classList.toggle("hot", d.chan === "stream" && d.serving.indexOf(r) > -1);
+      var chip = $("chip-s-" + r);
+      chip.classList.toggle("hot", d.chan === "stream" && d.serving.indexOf(r) > -1);
+      chip.classList.toggle("down", !state.stream);
+      chip.setAttribute("aria-checked", state.stream ? "true" : "false");
+      chip.setAttribute("aria-disabled", (r === "east" ? d.eastUp : state.west) ? "false" : "true");
     });
     $("chip-mdefaults").classList.toggle("hot", d.sm === "msdk");
 
@@ -797,6 +836,7 @@
     go(i > -1 ? (i + 1) % steps.length : nextStep(state));
   });
   $("reset").addEventListener("click", function () { go(0); });
+  narrow.addEventListener("change", render);
   render();
 })();
 </script>
