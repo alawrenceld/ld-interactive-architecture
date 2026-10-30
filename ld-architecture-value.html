@@ -336,11 +336,11 @@
 
   <div class="console">
     <div class="readout">
-      <span class="num" id="num">~25 ms</span>
+      <span class="num" id="num">~25ms</span>
       <span class="rlabel" id="rlabel">cold start to first evaluation</span>
     </div>
     <p class="narration" aria-live="polite" id="story">
-      SDKs cold-start from CDN-served state in about 25 ms, then switch to the live stream — picking up exactly where the fetch left off. Serverless cold starts, autoscaled containers, and first page loads never wait, and never miss a change made while booting.
+      SDKs cold-start from CDN-served state in about 25ms, then switch to the live stream — picking up exactly where the fetch left off. Serverless cold starts, autoscaled containers, and first page loads never wait, and never miss a change made while booting.
     </p>
     <p class="footnote">Figures from LaunchDarkly’s architecture testing; see the full architecture page for how each is measured.</p>
   </div>
@@ -361,18 +361,18 @@
       dim: ["n-relay"],
       pipes: { pp: "", pc: "hot", ps: "" },
       chips: ["ch-mem"],
-      num: "~25 ms",
+      num: "~25ms",
       rlabel: "cold start to first evaluation",
-      story: "SDKs cold-start from CDN-served state in about 25 ms, then switch to the live stream — picking up exactly where the fetch left off. Serverless cold starts, autoscaled containers, and first page loads never wait, and never miss a change made while booting."
+      story: "SDKs cold-start from CDN-served state in about 25ms, then switch to the live stream — picking up exactly where the fetch left off. Serverless cold starts, autoscaled containers, and first page loads never wait, and never miss a change made while booting."
     },
     "t-changes": {
       hot: ["n-platform", "n-stream", "n-server", "n-client"],
       dim: ["n-cdn", "n-relay"],
       pipes: { pp: "hot", pc: "dim", ps: "hot show-delta" },
       chips: [],
-      num: "<200 ms",
+      num: "<200ms",
       rlabel: "a change reaches every SDK, worldwide",
-      story: "Flip a flag and the streaming service pushes only what changed — a delta of roughly 138 bytes, not a full re-download. Changes typically reach every connected SDK in streaming mode in under 200 ms, worldwide. Kill switches land everywhere at once."
+      story: "Flip a flag and the streaming service pushes only what changed — a delta of roughly 138 bytes, not a full re-download. Changes typically reach every connected SDK in streaming mode in under 200ms, worldwide. Kill switches land everywhere at once."
     },
     "t-failover": {
       hot: ["n-server", "n-relay"],

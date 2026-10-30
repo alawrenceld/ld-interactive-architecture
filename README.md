@@ -37,7 +37,7 @@ with `#startup`.
 The architectural-value story as four benefit scenes. One delivery diagram
 (LaunchDarkly -> [NETWORK NAME] with CDN + streaming lanes -> your cloud with
 server SDKs, client devices, optional Relay Proxy) re-lit by four tabs:
-Fast start (~25 ms), Fast changes (<200 ms, 138-byte delta), Failover built in
+Fast start (~25ms), Fast changes (<200ms, 138-byte delta), Failover built in
 (0 errors), Private by design (0 rules). Big-number readout flips per scene.
 
 ## Implementation notes
@@ -58,7 +58,7 @@ Fast start (~25 ms), Fast changes (<200 ms, 138-byte delta), Failover built in
 
 - Draft concepts, not production pages. "[NETWORK NAME]" is a deliberate
   placeholder until the network naming DACI closes.
-- All figures (~25 ms, <200 ms, 138 bytes, 90%+, outage-test counts) come
+- All figures (~25ms, <200ms, 138 bytes, 90%+, outage-test counts) come
   from internal Seven Claims / FDv2 testing and must be cleared before
   external publish. The reversal-speed figure is inferred, not measured —
   see the architecture page draft doc for the full clearance list.

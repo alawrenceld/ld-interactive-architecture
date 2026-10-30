@@ -755,7 +755,6 @@
   <div class="pagetabs" role="tablist" aria-label="Architecture views">
     <button class="ptab" role="tab" id="tab-res" aria-selected="true" aria-controls="panel-res">Stays online</button>
     <button class="ptab" role="tab" id="tab-start" aria-selected="false" aria-controls="panel-start" tabindex="-1">Starts fast</button>
-    <button class="ptab" role="tab" id="tab-fun" aria-selected="false" aria-controls="panel-res" tabindex="-1">The fun one</button>
   </div>
 
   <div id="panel-res" role="tabpanel" aria-labelledby="tab-res">
@@ -903,7 +902,7 @@
     </div>
     <p class="narration" aria-live="polite" id="narration">
       <span class="step-k" id="stepk">healthy path</span>
-      <span id="story">State streams from Region 1 to every connected SDK — changes typically land worldwide in under 200 ms, and server SDKs evaluate every decision locally, in-process.</span>
+      <span id="story">State streams from Region 1 to every connected SDK — changes typically land worldwide in under 200ms, and server SDKs evaluate every decision locally, in-process.</span>
     </p>
     <div class="controls">
       <button class="btn-ghost" id="reset" style="visibility:hidden">Restore everything</button>
@@ -1029,7 +1028,7 @@
   var steps = [
     {
       k: "healthy path",
-      story: "State streams from Region 1 to every connected SDK — changes typically land worldwide in under 200 ms, and server SDKs evaluate every decision locally, in-process.",
+      story: "State streams from Region 1 to every connected SDK — changes typically land worldwide in under 200ms, and server SDKs evaluate every decision locally, in-process.",
       state: st([]),
       next: "Take an availability zone down"
     },
@@ -1041,7 +1040,7 @@
     },
     {
       k: "failure 2 of 6 — the primary region",
-      story: "Region 1 goes dark. Region 2 takes over automatically — same state, same stream. A cloud region’s bad day never becomes your incident.",
+      story: "Region 1 goes dark. Region 2 takes over automatically — same state, same stream. A cloud region’s bad day doesn’t have to become your incident.",
       state: st(["a", "east"]),
       next: "Take Region 2 down too"
     },
@@ -1368,7 +1367,6 @@
     });
   });
   if (location.hash === "#startup") show(document.getElementById("tab-start"));
-  if (location.hash === "#fun") show(document.getElementById("tab-fun"));
 })();
 
 // Startup walkthrough: boot on defaults, fetch from the CDN, go live on the stream.
@@ -1388,7 +1386,7 @@
     },
     {
       k: "step 1 of 6 — start up",
-      story: "Your app starts. Until the SDK has flag data, every evaluation returns the code-level default you passed in — never an error.",
+      story: "Your app starts. Until the SDK has flag data, every evaluation returns the code-level default you passed in.",
       data: "none yet", eval: "code defaults", conn: "none",
       live: [], hot: ["s-sdk"], chip: false, pkts: [], tpoll: "polling", tstream: "streaming",
       warm: { story: "Your app starts with a warm cache. The SDK evaluates from the state saved on the last run right away, before it reaches the network.",
@@ -1407,8 +1405,8 @@
     },
     {
       k: "step 3 of 6 — ready",
-      story: "The edge answers with complete, ready-to-run state in about 25 ms. It lands in the SDK’s local cache, and the SDK evaluates every flag locally, in-process.",
-      warm: { story: "The edge answers with fresh, complete state in about 25 ms. It replaces the cached copy, and the SDK evaluates every flag locally, in-process." },
+      story: "The edge answers with complete, ready-to-run state in about 25ms. It lands in the SDK’s local cache, and the SDK evaluates every flag locally, in-process.",
+      warm: { story: "The edge answers with fresh, complete state in about 25ms. It replaces the cached copy, and the SDK evaluates every flag locally, in-process." },
       data: "complete · v41", eval: "local, in-process", conn: "fetched from the CDN",
       live: ["s-ppoll", "s-pcache"], hot: ["s-cdncard", "s-cache", "s-sdk"], chip: false, pkts: [["s-kpoll", "left"], ["s-kcache", "left"]], tpoll: "full state", tstream: "streaming",
       next: "Open the stream"
