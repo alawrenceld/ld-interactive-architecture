@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>LaunchDarkly architecture — stays online, starts fast</title>
+<title>LaunchDarkly architecture — stays online, starts fast, billing</title>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Sora:wght@700&family=Inter:wght@400;500;600&family=JetBrains+Mono:wght@500&display=swap">
 <style>
   :root {
@@ -18,6 +18,7 @@
     --blue: #405BFF;
     --blue-press: #2A3BA6;
     --blue-ghost: rgba(64, 91, 255, .08);
+    --blue-soft: #8FA0FF;
     --lime: #DDFF46;
     --lime-edge: #B9D82A;
     --warn: #FF9D29;
@@ -43,6 +44,7 @@
       --blue: #5E75FF;
       --blue-press: #8193FF;
       --blue-ghost: rgba(94,117,255,.14);
+      --blue-soft: #A3B1FF;
       --lime-edge: #DDFF46;
       --ok: #3DD68C;
       --down: #6B6B74;
@@ -62,6 +64,7 @@
     --blue: #5E75FF;
     --blue-press: #8193FF;
     --blue-ghost: rgba(94,117,255,.14);
+    --blue-soft: #A3B1FF;
     --lime-edge: #DDFF46;
     --ok: #3DD68C;
     --down: #6B6B74;
@@ -748,6 +751,248 @@
   @keyframes sOrbit { to { rotate: 360deg; } }
 
   @media (prefers-reduced-motion: reduce) { .dz .dz-p:not(.dz-cap) { display: none; } }
+
+  /* ---------- billing tabs ---------- */
+  /* What the SDKs saw this month on the left; the meter, and why, on the right. */
+  .barch { display: grid; grid-template-columns: minmax(0, 1fr) 320px; gap: 20px; align-items: stretch; }
+  .b-scene { display: flex; flex-direction: column; min-height: 380px; }
+  .b-empty { margin: auto; color: var(--muted); font-size: 14px; }
+  .b-tiles { display: grid; grid-template-columns: repeat(auto-fill, minmax(210px, 1fr)); gap: 14px; align-content: start; }
+  .tile { padding: 14px 16px; gap: 6px; flex: 0 0 auto; }
+  .tile h3 { font: 500 13.5px/1.3 "JetBrains Mono", monospace; letter-spacing: 0; }
+  .tile .role { font-size: 12.5px; }
+  .tile .count { margin-top: auto; padding-top: 6px; font: 500 12px/1.3 "JetBrains Mono", monospace; color: var(--muted); }
+  .tile .count b { color: var(--ink); font-weight: 500; }
+  .chip.free { background: transparent; border: 1px dashed var(--border-strong); }
+  .tile.ghost { border-style: dashed; box-shadow: none; }
+  .tile.ghost > :not(.badge) { opacity: .5; }
+  .tile.warn { border-color: var(--warn); }
+  .tile.warn .count b { color: var(--warn); }
+  .tile.lit, .irow.lit, .sc-relay.lit {
+    border-color: var(--lime-edge);
+    box-shadow: 0 0 0 2px var(--lime-edge), var(--shadow-md);
+  }
+  .tile.lit .badge, .irow.lit .badge, .sc-relay.lit .badge { opacity: 1; transform: none; }
+  .tile.enter, .irow.enter { animation: tileIn .35s cubic-bezier(0.2, 0, 0, 1) both; }
+  @keyframes tileIn { from { opacity: 0; transform: translateY(8px); } }
+
+  .meter { display: flex; flex-direction: column; }
+  .mnum { font: 700 clamp(46px, 5vw, 68px)/1 "Sora", sans-serif; letter-spacing: -0.035em; margin: 4px 2px 0; }
+  .munit { margin: 8px 2px 18px; font-size: 14px; color: var(--muted); }
+  .mrows { margin-top: auto; }
+  .mrows div { padding-left: 8px; margin-left: -8px; border-left: 3px solid transparent; transition: border-color .2s cubic-bezier(0.2,0,0,1); }
+  .mrows div.lit { border-left-color: var(--lime-edge); }
+  .mrows div.lit dt, .mrows div.lit dd { color: var(--ink); font-weight: 600; }
+  .mfoot { margin: 14px 2px 0; font-size: 12.5px; color: var(--muted); }
+
+  /* server side: one row per group of SDK instances, with how much of the month it was connected */
+  .irows { display: flex; flex-direction: column; margin: -12px -4px -4px; }
+  /* a switched-off use case folds away instead of leaving an empty box */
+  .irow-wrap { display: grid; grid-template-rows: 1fr; opacity: 1;
+    transition: grid-template-rows .35s cubic-bezier(0.2,0,0,1), opacity .25s cubic-bezier(0.2,0,0,1); }
+  .irow-wrap.gone { grid-template-rows: 0fr; opacity: 0; }
+  .irow-in { overflow: hidden; min-height: 0; padding: 12px 4px 4px; transition: padding .35s cubic-bezier(0.2,0,0,1); }
+  .irow-wrap.gone .irow-in { padding-top: 0; padding-bottom: 0; }
+  /* the wrapper clips, so a lit row keeps a small shadow that fits inside it */
+  .irow.lit { box-shadow: 0 0 0 2px var(--lime-edge), var(--shadow-sm); }
+  /* the instances themselves: one box per server or pod, one dot per SDK running in it */
+  .irow-sep { display: flex; align-items: center; gap: 10px; padding: 8px 2px 0; font-size: 12.5px; font-weight: 600; color: var(--muted); }
+  .irow-sep::after { content: ""; flex: 1 1 auto; border-top: 1px dashed var(--border-strong); order: 1; }
+  .irow-sep em { order: 2; font-style: normal; font-weight: 400; }
+  .fleet { display: flex; flex-wrap: wrap; gap: 4px; margin: 10px 0 4px; min-height: 30px; align-items: flex-end; }
+  .fleet i { position: relative; display: grid; grid-template-columns: repeat(2, 5px); gap: 3px; place-content: center;
+    border: 1.5px solid var(--border-strong); background: var(--zone); }
+  .fleet i.new { animation: fleetIn .35s cubic-bezier(0.2,0,0,1) both; }
+  @keyframes fleetIn { from { opacity: 0; transform: scale(.4); } }
+  .fleet i b { width: 5px; height: 5px; border-radius: 50%; background: var(--blue); }
+  /* a server: a rack unit with two drive lines across the top, its SDKs below */
+  .fleet .server { width: 22px; height: 30px; border-radius: 4px; align-content: end; padding-bottom: 5px; }
+  .fleet .server::before { content: ""; position: absolute; left: 4px; right: 4px; top: 4px; height: 4px;
+    border-top: 1.5px solid var(--border-strong); border-bottom: 1.5px solid var(--border-strong); }
+  .fleet .pod { width: 21px; height: 21px; border-radius: 6px; }
+  .fleet .req, .fleet .fn { width: 18px; height: 18px; border-radius: 50%; border-color: var(--blue); animation: blink 1.6s ease-in-out infinite; }
+  .fleet .req { border-color: var(--warn); }
+  .fleet .fn::after { content: "λ"; font: 600 11px/1 "Inter", sans-serif; color: var(--blue); position: absolute; inset: 0; display: grid; place-items: center; }
+  @keyframes blink { 0%, 100% { opacity: .2; } 50% { opacity: 1; } }
+  /* each Lambda invocation pops into existence, runs briefly and vanishes, over and over */
+  /* lighter blue, and a slow, even fade in and out with no overshoot */
+  .fleet .fn { border-color: var(--blue-soft); background: var(--blue-ghost); animation: fnLife 2.4s ease-in-out infinite both; }
+  .fleet .fn::after { color: var(--blue-soft); }
+  @keyframes fnLife { 0%, 10% { opacity: 0; transform: scale(.7); } 40%, 60% { opacity: 1; transform: scale(1); } 90%, 100% { opacity: 0; transform: scale(.7); } }
+  @media (prefers-reduced-motion: reduce) { .fleet i.new, .fleet .req, .fleet .fn { animation: none; } .irow-wrap, .irow-in, .sc-relaywrap { transition: none; } }
+  .fleet .more { font: 500 11px/1 "JetBrains Mono", monospace; color: var(--muted); align-self: center; }
+  .irow {
+    position: relative;
+    /* fixed columns, so the bars line up from row to row whatever the labels say */
+    display: grid; grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 176px; gap: 6px 16px; align-items: center;
+    background: var(--panel); border: 1px solid var(--border); border-radius: 10px; padding: 12px 16px;
+    box-shadow: var(--shadow-sm);
+    transition: box-shadow .2s cubic-bezier(0.2,0,0,1), border-color .2s cubic-bezier(0.2,0,0,1);
+  }
+  .irow h3 { margin: 0; font-size: 14.5px; font-weight: 600; }
+  /* client side: a person per context key; outlined when the key already counted elsewhere */
+  .fleet i.person { width: 14px; height: 20px; border: 0; background: transparent; display: block; }
+  .fleet i.person::before, .fleet i.person::after { content: ""; position: absolute; background: var(--blue); border: 0;
+    transition: background-color .12s linear, box-shadow .12s linear; }
+  .fleet i.person::before { left: 4px; top: 1px; width: 6px; height: 6px; border-radius: 50%; }
+  .fleet i.person::after { left: 1px; right: auto; top: auto; bottom: 1px; width: 12px; height: 9px; border-radius: 6px 6px 2px 2px; }
+  .fleet i.person.bot::before, .fleet i.person.bot::after { background: var(--warn); }
+  .fleet i.person.dup::before, .fleet i.person.dup::after { background: transparent; box-shadow: inset 0 0 0 1.5px var(--down); }
+  .fleet i.person.up { background: transparent; }
+  .fleet i.person.down { background: transparent; }
+  .fleet i.person.down::before, .fleet i.person.down::after { background: var(--down); opacity: .45; box-shadow: none; }
+  .irow.free { border-style: dashed; box-shadow: none; }
+  .irow.free .ival { color: var(--ok); }
+  #panel-cmau .tnum { width: 5.6em; }
+  /* a number you can change, inline in the title */
+  .tnum::-webkit-inner-spin-button, .tnum::-webkit-outer-spin-button { -webkit-appearance: none; margin: 0; }
+  .tnum { -moz-appearance: textfield; appearance: textfield; field-sizing: content; width: 3em; min-width: 2em; text-align: center;
+    margin: 0 2px; padding: 1px 5px; font: 600 14px/1.3 "JetBrains Mono", monospace; color: var(--blue);
+    background: var(--blue-ghost); border: 1px solid transparent; border-bottom: 1.5px dashed var(--blue); border-radius: 4px; }
+  .tnum:hover { border-color: var(--border-strong); }
+  .tnum:focus { outline: none; border-color: var(--blue); box-shadow: var(--focus); }
+  .irow .chips { margin-top: 5px; }
+  .irow.warn { border-color: var(--warn); }
+  .irow.warn .ival { color: var(--warn); }
+  .tbar { height: 10px; border-radius: 999px; background: var(--blue-ghost); overflow: hidden; }
+  .tfill { height: 100%; border-radius: 999px; background: var(--blue); transition: width .45s cubic-bezier(0.2,0,0,1); }
+  .irow.warn .tfill { background: var(--warn); }
+  .tfill.daily { border-radius: 0; background: linear-gradient(90deg, var(--blue) 50%, transparent 50%) 0 0 / calc(100% / 30.5) 100%; }
+  .twhen { display: block; margin-top: 5px; font-size: 12px; color: var(--muted); }
+  .ival { font: 500 13px/1.3 "JetBrains Mono", monospace; text-align: right; white-space: nowrap; }
+  .ival small { display: block; font-size: 11px; color: var(--muted); }
+  /* server-side diagram: your SDKs -> optional Relay Proxy -> LaunchDarkly; state flows toward your SDKs */
+  .sflow { display: flex; align-items: stretch; position: relative; }
+  .sc-infra { flex: 1 1 auto; min-width: 0; display: flex; flex-direction: column; }
+  .sc-inrow { display: flex; align-items: stretch; flex: 1 1 auto; position: relative; }
+  /* one link from the Relay Proxy to each box, drawn over the gap between them */
+  .sc-wires { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; overflow: visible; z-index: 2; }
+  .sc-wires .wire.poll { animation-duration: 2.6s; }
+  #sc-p1.wired .line, #sc-p1.wired::before, #sc-p2.wired .line, #sc-p2.wired::before { visibility: hidden; }
+  .sc-inrow .irows { flex: 1 1 auto; min-width: 0; }
+  .sc-relay { min-height: 168px; }
+  /* each proxy sits level with the boxes it serves; drawWires sets its top */
+  .relays { position: relative; flex: 0 0 200px; align-self: stretch; }
+  .relays .sc-relay { position: absolute; left: 0; right: 0; top: 0;
+    transition: top .35s cubic-bezier(0.2,0,0,1), opacity .25s cubic-bezier(0.2,0,0,1), box-shadow .2s, border-color .2s; }
+  .sc-relay.mini { min-height: 0; padding: 12px 14px; gap: 6px; }
+  .sc-relay.mini h3 { font-size: 14px; }
+  .sc-relay.mini .status { padding-top: 0; }
+  .sc-relay.gone { opacity: 0; pointer-events: none; }
+  /* the Relay Proxy and its link fold away when it's off */
+  .sc-relaywrap { display: flex; align-items: stretch; flex: 0 0 auto; max-width: 340px; overflow: hidden; padding: 14px 4px;
+    margin: -14px -4px; transition: max-width .35s cubic-bezier(0.2,0,0,1), opacity .25s cubic-bezier(0.2,0,0,1); }
+  .sc-relaywrap.gone { max-width: 0; opacity: 0; }
+  .sc-relay .status .dot { background: var(--ok); }
+  .sc-relay.down .status .dot { background: var(--down); }
+  #sc-p1, #sc-p2, #c-p2 { flex-basis: clamp(48px, 6vw, 88px); }
+  /* fixed heights and steady number widths, so flipping a switch never shifts the layout */
+  .irow { min-height: 84px; }
+  .irow.off { border-style: dashed; box-shadow: none; }
+  .irow.off > :not(.badge) { opacity: .4; }
+  .irow > *, .sc-relay > * { transition: opacity .2s cubic-bezier(0.2,0,0,1); }
+  .mnum { font-variant-numeric: tabular-nums; }
+  :is(#panel-sc, #panel-cmau) .mnum { min-width: 3.2em; }
+  :is(#panel-sc, #panel-cmau) .narration { min-height: 5.4em; }
+  .sc-ld { flex: 0 0 220px; display: flex; flex-direction: column; }
+  .sc-ld .card { flex: 1 1 auto; justify-content: center; }
+  .pipe.poll .line { animation-duration: 2.6s; }
+  /* the meter runs across the top here, so the diagram gets the full width */
+  :is(#panel-sc, #panel-cmau) .barch { grid-template-columns: minmax(0, 1fr); }
+  :is(#panel-sc, #panel-cmau) .meter { order: -1; display: grid; grid-template-columns: minmax(280px, auto) minmax(0, 1fr); align-items: end; gap: 0 32px; }
+  :is(#panel-sc, #panel-cmau) .meter .mhead { grid-column: 1 / -1; display: flex; align-items: center; justify-content: space-between; gap: 12px; margin-bottom: 10px; }
+  :is(#panel-sc, #panel-cmau) .meter .mhead .zlabel { margin: 0 2px; }
+  .bwatch { padding: 9px 18px; font-size: 14px; min-width: 150px; }
+  .mline { display: flex; align-items: flex-end; gap: 20px; }
+  .tank { position: relative; height: 12px; margin: 12px 2px 4px; border-radius: 999px; background: var(--blue-ghost); overflow: hidden; }
+  .liquid { position: absolute; left: 0; top: 0; bottom: 0; width: 100%; border-radius: 999px; background: var(--blue); transition: width .45s cubic-bezier(0.2,0,0,1); }
+  /* the month starts from zero at once: no bars or tank easing down from last month's totals */
+  .watching .liquid, .watching .tfill { transition: none; }
+  .mday { display: block; margin-top: 4px; font: 500 12px/1.2 "JetBrains Mono", monospace; color: var(--muted); }
+  .watching .mday { color: var(--ink); }
+  .fleet i { transition: opacity .2s cubic-bezier(0.2,0,0,1), border-color .12s linear, background-color .12s linear; }
+  /* while a month plays, scaling rows show each instance as up (blue) or down (grey) */
+  .fleet i.up { border-color: var(--blue); background: var(--blue-ghost); }
+  .fleet i.up::before { border-color: var(--blue); }
+  .fleet i.down { border-color: var(--border); background: transparent; }
+  .fleet i.down::before { border-color: var(--border); }
+  .fleet i.down b { background: var(--down); }
+  .fleet i b { transition: background-color .12s linear; }
+  :is(#panel-sc, #panel-cmau) .meter .munit { margin: 0 0 8px; }
+  :is(#panel-sc, #panel-cmau) .meter .mrows { margin: 0; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px 24px; }
+  @media (max-width: 1279px) {
+    .sflow, .sc-inrow { flex-direction: column-reverse; }
+    .relays { position: static; flex-basis: auto; display: flex; flex-direction: column; gap: 10px; align-self: stretch; }
+    .relays .sc-relay { position: static; }
+    .relays .sc-relay.gone { display: none; }
+    .sc-relaywrap { flex-direction: column-reverse; max-width: none; max-height: 320px; transition: max-height .35s cubic-bezier(0.2,0,0,1), opacity .25s cubic-bezier(0.2,0,0,1); }
+    .sc-relaywrap.gone { max-width: none; max-height: 0; }
+    .sc-ld { flex-basis: auto; }
+    :is(#panel-sc, #panel-cmau) .meter { grid-template-columns: minmax(0, 1fr); }
+    :is(#panel-sc, #panel-cmau) .meter .mrows { grid-column: 1 / -1; grid-template-columns: 1fr; margin-top: 14px; }
+    #sc-p2 .ptag, #c-p2 .ptag { display: none; }
+  }
+
+  /* server side: independent switches for each part of your setup */
+  .bopts { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; margin: 0 0 20px; }
+  .bopt {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 7px 16px 7px 8px; border-radius: 999px;
+    border: 1px solid var(--border-strong); background: var(--panel); color: var(--ink);
+    font: 600 14px/1 "Inter", sans-serif;
+  }
+  .bopt:hover { background: var(--blue-ghost); }
+  .bopt[aria-checked="true"] { border-color: var(--blue); }
+  .bopt .tog { display: block; margin: 0; pointer-events: none; }
+  .bopt[aria-checked="false"] .tog { background: var(--muted); }
+  .bopt[aria-checked="false"] .tog::after { left: 3px; }
+  .bseg { display: inline-flex; padding: 3px; border: 1px solid var(--border-strong); border-radius: 999px; background: var(--panel); }
+  .bseg button { font: 600 14px/1 "Inter", sans-serif; padding: 9px 16px; border: 0; border-radius: 999px; background: transparent; color: var(--muted); }
+  .bseg button[aria-checked="true"] { background: var(--blue); color: #fff; }
+  .bint { display: inline-flex; align-items: center; gap: 2px; padding: 3px 3px 3px 14px; border: 1px solid var(--border-strong); border-radius: 999px; background: var(--panel); cursor: pointer;
+          transition: opacity .2s cubic-bezier(0.2,0,0,1); }
+  .bint span { font: 600 13px/1 "Inter", sans-serif; color: var(--muted); margin-right: 6px; }
+  .bint select { font: 600 14px/1 "Inter", sans-serif; color: var(--ink); background: var(--blue-ghost); border: 0; border-radius: 999px;
+    padding: 8px 30px 8px 12px; cursor: pointer; appearance: none; -webkit-appearance: none;
+    background-image: linear-gradient(45deg, transparent 50%, var(--blue) 50%), linear-gradient(135deg, var(--blue) 50%, transparent 50%);
+    background-position: calc(100% - 15px) 52%, calc(100% - 10px) 52%; background-size: 5px 5px; background-repeat: no-repeat; }
+  .bint select:focus-visible { outline: none; box-shadow: var(--focus); }
+  .bint.dim { opacity: .45; }
+  :is(#panel-sc, #panel-cmau) .console { grid-template-columns: minmax(0, 1fr) auto; }
+  :is(#panel-sc, #panel-cmau) .controls { width: auto; }
+  @media (max-width: 1279px) { :is(#panel-sc, #panel-cmau) .console { grid-template-columns: 1fr; } }
+
+  /* questions we hear most */
+  .faq { margin-top: clamp(40px, 6vw, 64px); max-width: 960px; }
+  .faq h2 { font: 700 clamp(22px, 2.4vw, 28px)/1.15 "Sora", sans-serif; letter-spacing: -0.02em; margin: 0 0 16px; }
+  .faq details { border-top: 1px solid var(--border); }
+  .faq details:last-of-type { border-bottom: 1px solid var(--border); }
+  .faq summary {
+    cursor: pointer; list-style: none; padding: 16px 36px 16px 2px; position: relative;
+    font-weight: 600; font-size: 16px;
+  }
+  .faq summary::-webkit-details-marker { display: none; }
+  .faq summary::after {
+    content: "+"; position: absolute; right: 6px; top: 50%; transform: translateY(-50%);
+    font: 500 20px/1 "JetBrains Mono", monospace; color: var(--blue);
+  }
+  .faq details[open] summary::after { content: "−"; }
+  .faq summary:focus-visible { outline: none; box-shadow: var(--focus); border-radius: 4px; }
+  .faq details p { margin: 0 0 16px; padding: 0 2px; color: var(--muted); max-width: 760px; }
+  .faq details p strong { color: var(--ink); font-weight: 600; }
+
+  @media (max-width: 899px) {
+    .barch { grid-template-columns: minmax(0, 1fr); }
+    .meter { order: -1; }
+    .mrows { margin-top: 0; }
+    .b-scene { min-height: 0; }
+    .b-empty { margin: 24px auto; }
+    .irow { grid-template-columns: minmax(0, 1fr) auto; }
+    .irow .tcell { grid-column: 1 / -1; grid-row: 2; }
+  }
+  @media (prefers-reduced-motion: reduce) {
+    .tile.enter, .irow.enter { animation: none; }
+  }
 </style>
 </head>
 <body>
@@ -755,6 +1000,8 @@
   <div class="pagetabs" role="tablist" aria-label="Architecture views">
     <button class="ptab" role="tab" id="tab-res" aria-selected="true" aria-controls="panel-res">Stays online</button>
     <button class="ptab" role="tab" id="tab-start" aria-selected="false" aria-controls="panel-start" tabindex="-1">Starts fast</button>
+    <button class="ptab" role="tab" id="tab-cmau" aria-selected="false" aria-controls="panel-cmau" tabindex="-1">Client-side billing</button>
+    <button class="ptab" role="tab" id="tab-sc" aria-selected="false" aria-controls="panel-sc" tabindex="-1">Server-side billing</button>
   </div>
 
   <div id="panel-res" role="tabpanel" aria-labelledby="tab-res">
@@ -989,8 +1236,244 @@
     </div>
   </div>
   </div>
+
+  <div id="panel-cmau" role="tabpanel" aria-labelledby="tab-cmau" hidden>
+  <div class="lede">
+    <h1>Client-side MAU: you pay for people, not page views.</h1>
+    <p>Browser, mobile and edge SDKs bill on <strong>client-side monthly active users</strong>. Each unique context key that gets flag values during the month counts once, however often it comes back.</p>
+  </div>
+
+  <div class="bopts" role="group" aria-label="Your audience">
+    <button class="bopt" role="switch" aria-checked="false" data-copt="mobile"><span class="tog" aria-hidden="true"></span>Mobile app</button>
+    <button class="bopt" role="switch" aria-checked="false" data-copt="mobileKey"><span class="tog" aria-hidden="true"></span>Device ID as key</button>
+    <button class="bopt" role="switch" aria-checked="false" data-copt="contexts"><span class="tog" aria-hidden="true"></span>Multi-contexts</button>
+    <button class="bopt" role="switch" aria-checked="false" data-copt="anon"><span class="tog" aria-hidden="true"></span>Anonymous visitors</button>
+    <button class="bopt" role="switch" aria-checked="false" data-copt="signups"><span class="tog" aria-hidden="true"></span>Sign-ups</button>
+    <button class="bopt" role="switch" aria-checked="false" data-copt="bots"><span class="tog" aria-hidden="true"></span>Bots and test browsers</button>
+    <button class="bopt" role="switch" aria-checked="false" data-copt="botFilter"><span class="tog" aria-hidden="true"></span>Bot filtering (proposed)</button>
+    <button class="bopt" role="switch" aria-checked="false" data-copt="project"><span class="tog" aria-hidden="true"></span>Second project</button>
+  </div>
+
+  <div class="barch">
+    <div class="sflow" id="c-flow" aria-label="Your users and how they reach LaunchDarkly">
+      <section class="zone sc-infra" aria-label="Your users">
+        <span class="zlabel">Your users this month · each figure is one context key</span>
+        <div class="irows" id="c-rows"></div>
+      </section>
+      <div class="pipe" id="c-p2"><span class="ptag">flag values</span><div class="line"></div></div>
+      <section class="zone sc-ld" aria-label="LaunchDarkly">
+        <span class="zlabel">LaunchDarkly</span>
+        <article class="card">
+          <div class="chead"><h3>LaunchDarkly</h3></div>
+          <p class="role">Sends each client-side SDK the flag values for its context</p>
+          <div class="chips"><span class="chip hot">client-side</span></div>
+        </article>
+      </section>
+    </div>
+    <section class="zone meter" aria-label="Client-side MAU this month">
+      <div class="mhead">
+        <span class="zlabel">This month’s count</span>
+        <button class="btn-primary bwatch" id="c-watch">Watch a month</button>
+      </div>
+      <div class="mcount">
+        <div class="mline">
+          <span class="mnum" id="c-num">0</span>
+          <span class="munit">client-side MAU<span class="mday" id="c-day">full month</span></span>
+        </div>
+        <!-- the month's unique keys, filling from left to right as the days go by -->
+        <div class="tank" aria-hidden="true"><div class="liquid" id="c-liquid"></div></div>
+      </div>
+      <dl class="sread mrows">
+        <div id="c-r-key"><dt>counted once per month</dt><dd>each unique key</dd></div>
+        <div id="c-r-repeat"><dt>repeat visits, evaluations</dt><dd>not counted</dd></div>
+        <div id="c-r-kind"><dt>context kind billed</dt><dd>one: your largest</dd></div>
+        <div id="c-r-anon"><dt>anonymous visitors</dt><dd>counted</dd></div>
+        <div id="c-r-dev"><dt>same key on another device</dt><dd>counted once</dd></div>
+        <div id="c-r-server"><dt>server-side SDK contexts</dt><dd>not counted</dd></div>
+      </dl>
+    </section>
+  </div>
+
+  <div class="console">
+    <p class="narration" aria-live="polite">
+      <span class="step-k" id="c-stepk"></span>
+      <span id="c-story"></span>
+    </p>
+    <div class="controls">
+      <button class="btn-ghost" id="c-reset" style="visibility:hidden">Reset everything</button>
+    </div>
+  </div>
+
+  <section class="faq" aria-labelledby="c-faq-h">
+    <h2 id="c-faq-h">Questions we hear most</h2>
+    <details><summary>Which SDKs count toward client-side MAU?</summary>
+      <p>Browser SDKs (JavaScript, React and the like), mobile SDKs (iOS, Android, Flutter, React Native), edge SDKs and AI SDKs. Server-side SDKs never add to client-side MAU. They bill as service connections instead, so evaluating millions of users on your backend doesn’t raise this number.</p></details>
+    <details><summary>Do page views, sessions or flag evaluations add to the count?</summary>
+      <p>No. A key counts once per month, whether it visits once or a thousand times, and however many flags it evaluates. The number of flags you have doesn’t matter either.</p></details>
+    <details><summary>One person on web and mobile, or in several projects: how many MAU?</summary>
+      <p>One, as long as you use the same key everywhere. The same key in several environments or projects also counts once. A different key for the same person, such as a device ID on mobile and a user ID on web, counts twice.</p></details>
+    <details><summary>We send user, device and organization contexts. Are we billed for all of them?</summary>
+      <p>No. You’re billed on <strong>one context kind</strong>, the one with the most unique keys that month, which is usually <code>user</code>. The other kinds in a multi-context ride along for free. Watch for one thing: if another kind has more keys, such as device IDs for anonymous traffic, that kind becomes the one you’re billed on.</p></details>
+    <details><summary>Do anonymous visitors count?</summary>
+      <p>Yes. The SDK makes up a key for an anonymous visitor and saves it on the device, so a returning visitor counts once. A private window, cleared browser storage or a fresh app install gets a new key, and a new MAU. When an anonymous visitor signs in, their anonymous key and their user key are both counted that month.</p></details>
+    <details><summary>Why is our MAU higher than our analytics numbers?</summary>
+      <p>This is the most common surprise, and the causes are usually the same: bots and crawlers, headless browsers in automated tests, code that makes a new key on every page load, device IDs used as keys, and anonymous traffic on pages that don’t use flags. The Usage page breaks MAU down by SDK, app and anonymous traffic, which usually points to the source.</p></details>
+    <details><summary>How do we bring it down?</summary>
+      <p>Keep keys stable across visits and devices. Don’t start the SDK for traffic you never target, such as bots or pages without flags. Keep automated test browsers out of production environments. None of this changes how your flags behave for real users.</p></details>
+    <details><summary>When does the count reset?</summary>
+      <p>At the start of each billing month. Everyone who comes back in the new month counts again, once.</p></details>
+    <details><summary>What happens if we go over our plan?</summary>
+      <p>Your flags keep working. LaunchDarkly never throttles or turns off flags for going over. On self-serve plans the overage is billed the following month. On Enterprise contracts, the contract is adjusted only when usage stays over your commitment; your account team will walk through it with you.</p></details>
+    <details><summary>Where can we see our usage?</summary>
+      <p>In LaunchDarkly, go to Account settings, then Usage, then Client-side MAU. You can break it down by project, environment, SDK, app and anonymous traffic, and see month to date or a rolling 30 days.</p></details>
+  </section>
+  </div>
+
+  <div id="panel-sc" role="tabpanel" aria-labelledby="tab-sc" hidden>
+  <div class="lede">
+    <h1>Service connections: you pay for connected time, not traffic.</h1>
+    <p>Server-side SDKs bill on <strong>service connections</strong>. One SDK instance connected to one environment for the whole month is one service connection. Less time counts as a fraction, so the number works out to your average count of connected instances.</p>
+  </div>
+
+  <div class="bopts" role="group" aria-label="Your setup">
+    <div class="bseg" role="radiogroup" aria-label="How your SDKs connect">
+      <button role="radio" aria-checked="true" data-mode="stream">Streaming</button>
+      <button role="radio" aria-checked="false" data-mode="poll">Polling</button>
+    </div>
+    <label class="bint" id="sc-int"><span>Poll every</span>
+      <select id="sc-intsel" aria-label="Polling interval">
+        <option value="15">15 seconds</option>
+        <option value="30" selected>30 seconds</option>
+        <option value="60">1 minute</option>
+        <option value="300">5 minutes</option>
+        <option value="3600">1 hour</option>
+      </select>
+    </label>
+    <button class="bopt" role="switch" aria-checked="false" data-opt="k8s"><span class="tog" aria-hidden="true"></span>Kubernetes</button>
+    <button class="bopt" role="switch" aria-checked="false" data-opt="workers"><span class="tog" aria-hidden="true"></span>Worker processes</button>
+    <button class="bopt" role="switch" aria-checked="false" data-opt="burst"><span class="tog" aria-hidden="true"></span>Autoscaling</button>
+    <button class="bopt" role="switch" aria-checked="false" data-opt="daily"><span class="tog" aria-hidden="true"></span>Daily scaling</button>
+    <button class="bopt" role="switch" aria-checked="false" data-opt="envs"><span class="tog" aria-hidden="true"></span>Staging and dev</button>
+    <button class="bopt" role="switch" aria-checked="false" data-opt="relay"><span class="tog" aria-hidden="true"></span>Relay Proxy</button>
+    <button class="bopt" role="switch" aria-checked="false" data-opt="php"><span class="tog" aria-hidden="true"></span>PHP</button>
+    <button class="bopt" role="switch" aria-checked="false" data-opt="fn"><span class="tog" aria-hidden="true"></span>Lambda function</button>
+  </div>
+
+  <div class="barch">
+    <div class="sflow" id="sc-flow" aria-label="Your server-side SDKs and how they reach LaunchDarkly">
+      <svg class="sc-wires" id="sc-wires" aria-hidden="true"></svg>
+      <section class="zone sc-infra" aria-label="Your infrastructure">
+        <span class="zlabel">Your infrastructure: server-side SDKs this month · each dot is one SDK</span>
+        <div class="sc-inrow" id="sc-inrow">
+          <div class="irows" id="sc-rows"></div>
+          <div class="sc-relaywrap gone" id="sc-relaywrap">
+          <div class="pipe" id="sc-p1"><div class="line"></div></div>
+          <div class="relays" id="sc-relays">
+          <article class="card sc-relay" id="sc-relay">
+            <span class="badge">not billed</span>
+            <div class="chead"><h3>Relay Proxy</h3></div>
+            <p class="role" id="sc-relayrole">Your SDKs connect here. It holds one connection to LaunchDarkly.</p>
+            <div class="status"><i class="dot"></i><span>own connection: 0.0</span></div>
+          </article>
+          <!-- staging and dev each get their own Relay Proxy -->
+          <article class="card sc-relay mini gone" id="sc-relay-stg">
+            <div class="chead"><h3>Relay Proxy</h3><span class="chip">staging</span></div>
+            <div class="status"><i class="dot"></i><span>own connection: 0.0</span></div>
+          </article>
+          <article class="card sc-relay mini gone" id="sc-relay-dev">
+            <div class="chead"><h3>Relay Proxy</h3><span class="chip">development</span></div>
+            <div class="status"><i class="dot"></i><span>own connection: 0.0</span></div>
+          </article>
+          </div>
+          </div>
+        </div>
+      </section>
+      <div class="pipe" id="sc-p2"><span class="ptag" id="sc-tag">streaming</span><div class="line"></div></div>
+      <section class="zone sc-ld" aria-label="LaunchDarkly">
+        <span class="zlabel">LaunchDarkly</span>
+        <article class="card">
+          <div class="chead"><h3>LaunchDarkly</h3></div>
+          <p class="role" id="sc-ldrole">Streams every flag change to each connected SDK</p>
+          <div class="chips"><span class="chip hot" id="sc-ldchip">streaming</span></div>
+        </article>
+      </section>
+    </div>
+    <section class="zone meter" aria-label="Service connections this month">
+      <div class="mhead">
+        <span class="zlabel">This month’s count</span>
+        <button class="btn-primary bwatch" id="sc-watch">Watch a month</button>
+      </div>
+      <div class="mcount">
+        <div class="mline">
+          <span class="mnum" id="sc-num">0</span>
+          <span class="munit">service connections<span class="mday" id="sc-day">full month</span></span>
+        </div>
+        <!-- the month's usage, filling from left to right as the days go by -->
+        <div class="tank" aria-hidden="true"><div class="liquid" id="sc-liquid"></div></div>
+      </div>
+      <dl class="sread mrows">
+        <div id="sc-r-unit"><dt>one service connection</dt><dd>1 SDK · 1 env · 1 month</dd></div>
+        <div id="sc-r-traffic"><dt>flags, evaluations, contexts</dt><dd>not counted</dd></div>
+        <div id="sc-r-time"><dt>measured as</dt><dd>connected time</dd></div>
+        <div id="sc-r-env"><dt>dev and staging</dt><dd>counted</dd></div>
+        <div id="sc-r-poll"><dt>polling, any interval</dt><dd>same as streaming</dd></div>
+        <div id="sc-r-relay"><dt>Relay Proxy itself</dt><dd>not billed</dd></div>
+      </dl>
+    </section>
+  </div>
+
+  <div class="console">
+    <p class="narration" aria-live="polite">
+      <span class="step-k" id="sc-stepk"></span>
+      <span id="sc-story"></span>
+    </p>
+    <div class="controls">
+      <button class="btn-ghost" id="sc-reset" style="visibility:hidden">Reset everything</button>
+    </div>
+  </div>
+
+  <section class="faq" aria-labelledby="sc-faq-h">
+    <h2 id="sc-faq-h">Questions we hear most</h2>
+    <details><summary>Which SDKs bill as service connections?</summary>
+      <p>Server-side SDKs, the ones that run in your backend: Node.js, Java, Go, Python, .NET, Ruby, PHP, Rust and the rest. Browser, mobile and edge SDKs bill on client-side MAU instead. Contexts your backend evaluates never add to client-side MAU.</p></details>
+    <details><summary>What exactly is one service connection?</summary>
+      <p>One instance of one server-side SDK, connected to one LaunchDarkly environment, for one full month. Shorter periods count as a fraction: two instances connected for half the month each add up to one.</p></details>
+    <details><summary>Is it per pod, per worker, per region or per SDK key?</summary>
+      <p>Per running SDK instance, per environment. Every pod, replica, container or worker process that starts its own SDK counts, in every region. An SDK key isn’t a unit: ten pods using one key are ten connections. One instance connected to two environments counts twice.</p></details>
+    <details><summary>Are we billed on our peak number of pods?</summary>
+      <p>No. You’re billed on total connected time across the month. Autoscaling up to 100 pods for an afternoon adds only that afternoon, not 100 connections.</p></details>
+    <details><summary>Does the Relay Proxy reduce our bill?</summary>
+      <p>No. This is the most common misunderstanding. The Relay Proxy reduces the network connections leaving your infrastructure, not billed service connections. Every SDK connected to the Relay Proxy still counts. The Relay Proxy’s own connection to LaunchDarkly isn’t billed, so adding one doesn’t raise the bill either. Use it for resilience, network control and fewer outbound connections, not for cost.</p></details>
+    <details><summary>Do dev, staging and preview environments count?</summary>
+      <p>Yes, the same as production. Local dev servers, PR preview apps and test runs that start the SDK all add connected time. If non-production usage is large, raise it with your account team.</p></details>
+    <details><summary>How do serverless functions like AWS Lambda count?</summary>
+      <p>By the time the function is running with the SDK, not by invocations. A million one-second invocations add up to a small fraction of one service connection. To estimate, multiply your average run time by your number of invocations.</p></details>
+    <details><summary>Why did our count suddenly spike?</summary>
+      <p>Most often, code creates a new SDK client per request or in a loop instead of once at startup. Other causes are new deployments or replicas, forked worker processes that each start an SDK, and dev or preview apps. Give each app an application ID in its SDK configuration, and the Usage page will show which app is responsible.</p></details>
+    <details><summary>Is polling a way to save?</summary>
+      <p>No. A running SDK counts for the time it runs, whether it streams or polls, so on current SDK versions the polling interval doesn’t change the count. It only changes how long a flag change takes to arrive. Streaming costs the same and delivers each change the moment it’s made.</p></details>
+    <details><summary>How is PHP counted?</summary>
+      <p>PHP starts a new process for every request, so it can’t hold a stream open, and each request polls for flags. Each poll counts as 30 seconds of connection time. A flag with prerequisites can make more than one poll. Caching flag data between requests means fewer polls.</p></details>
+    <details><summary>We run Kubernetes or multi-process apps. Is there different pricing?</summary>
+      <p>Some Enterprise contracts price these connections at a different rate. The count works the same way: every pod and process that starts an SDK still counts. Only the price per connection differs.</p></details>
+    <details><summary>What about daemon mode or the Relay Proxy’s offline mode?</summary>
+      <p>Billing for these setups is set in your contract. Talk to your account team before you design around them.</p></details>
+    <details><summary>How do we estimate what we’ll use?</summary>
+      <p>For each app, multiply the number of instances that run the SDK by the number of environments they connect to, and by the share of the month they’re up. Add the apps together. Always-on services dominate the total; short bursts barely move it.</p></details>
+    <details><summary>What happens if we go over, and where do we see usage?</summary>
+      <p>Your flags keep working; LaunchDarkly never throttles for going over. Self-serve plans pay the overage the following month, and Enterprise contracts adjust only when usage stays over your commitment. To see usage, go to Account settings, then Usage, then Service connections. You can break it down by environment, SDK, app and Relay Proxy version.</p></details>
+  </section>
+  </div>
 </main>
 
+<script>
+// Remembers each tab's choices in this browser. Storage can be missing or
+// blocked (private windows, previews), so every read and write is guarded.
+window.ldMemo = {
+  get: function (k) { try { return JSON.parse(localStorage.getItem("ld-arch:" + k)); } catch (e) { return null; } },
+  set: function (k, v) { try { localStorage.setItem("ld-arch:" + k, JSON.stringify(v)); } catch (e) {} }
+};
+</script>
 <script>
 (function () {
   "use strict";
@@ -1072,6 +1555,8 @@
 
   var state = st([]);
   var i = 0; // index into steps when the state matches one, else -1
+  var saved = ldMemo.get("layers");
+  if (saved && typeof saved === "object") keys.forEach(function (k) { if (typeof saved[k] === "boolean") state[k] = saved[k]; });
 
   // Everything shown follows from the layer states. LaunchDarkly is reachable
   // when an origin region is up and streaming or polling can deliver from it.
@@ -1293,7 +1778,7 @@
     // Caches just clear; disasters are for infrastructure.
     var hit = keys.filter(function (k) { return state[k] && !next[k] && !caches[k] && (azs.indexOf(k) < 0 || state.east); });
     keys.forEach(function (k) { if (next[k]) delete cause[k]; });
-    function done() { busy = false; state = next; i = j; render(); }
+    function done() { busy = false; state = next; i = j; ldMemo.set("layers", state); render(); }
     if (!chaos() || !hit.length) { if (!hit.length) lastCause = ""; return done(); }
     busy = true;
     var left = hit.length;
@@ -1335,6 +1820,7 @@
     dot.style.animationDelay = (-((q * 37) % 24) / 10) + "s";
     $("pgrid").appendChild(dot);
   }
+  i = matchStep(state);
   render();
 })();
 </script>
@@ -1355,7 +1841,8 @@
     });
     document.body.classList.toggle("chaos", t.id === "tab-fun");
     window.dispatchEvent(new Event("ldtab"));
-    var hash = { "tab-start": "#startup", "tab-fun": "#fun" }[t.id];
+    var hash = { "tab-start": "#startup", "tab-fun": "#fun", "tab-cmau": "#client-mau", "tab-sc": "#service-connections" }[t.id];
+    ldMemo.set("tab", t.id);
     try { history.replaceState(null, "", hash || location.pathname + location.search); } catch (e) {}
   }
   tabs.forEach(function (t, n) {
@@ -1366,7 +1853,621 @@
       show(next); next.focus();
     });
   });
-  if (location.hash === "#startup") show(document.getElementById("tab-start"));
+  var byHash = { "#startup": "tab-start", "#fun": "tab-fun", "#client-mau": "tab-cmau", "#service-connections": "tab-sc" }[location.hash];
+  var start = document.getElementById(byHash || (location.hash ? "" : ldMemo.get("tab")) || "");
+  if (start && tabs.indexOf(start) > -1) show(start);
+})();
+
+// Billing walkthroughs. Each step lists everything on screen; copy edits happen here.
+(function () {
+  "use strict";
+  var $ = function (id) { return document.getElementById(id); };
+  var reduced = window.matchMedia && matchMedia("(prefers-reduced-motion: reduce)").matches;
+  function el(tag, cls, text) {
+    var e = document.createElement(tag);
+    if (cls) e.className = cls;
+    if (text != null) e.textContent = text;
+    return e;
+  }
+  function chips(list, cls) {
+    var c = el("div", "chips");
+    (list || []).forEach(function (t) { c.appendChild(el("span", "chip" + (cls ? " " + cls : ""), t)); });
+    return c;
+  }
+
+  // the meter counts up to its new value
+  function countTo(node, to, fmt) {
+    var from = parseFloat(node.getAttribute("data-v") || "0");
+    node.setAttribute("data-v", to);
+    var run = node.ldRun = (node.ldRun || 0) + 1; // a newer count cancels this one
+    if (reduced || from === to) { node.textContent = fmt(to); return; }
+    var t0 = performance.now(), d = 450;
+    (function tick(now) {
+      if (run !== node.ldRun) return;
+      var k = Math.min(1, Math.max(0, (now - t0) / d)), e = 1 - Math.pow(1 - k, 3);
+      node.textContent = fmt(from + (to - from) * e);
+      if (k < 1) requestAnimationFrame(tick);
+    })(t0);
+  }
+
+  // ---------- client-side MAU: independent switches ----------
+  // Same pattern as the server-side tab: switches up top, one row per part of your audience,
+  // a person per context key, and a month you can watch fill up. Everything here is its own scope.
+  (function () {
+    var DEF = { mobile: false, mobileKey: false, contexts: false, anon: false, signups: false, bots: false, botFilter: false, project: false,
+                users: 10000, mobileN: 6000, anonN: 50000, signN: 2000, botN: 200000 };
+    var NUM = { users: [1, 1000000], mobileN: [1, 1000000], anonN: [1, 5000000], signN: [1, 1000000], botN: [1, 10000000] };
+    var MONTH = 30.5, opt = {}, last = null, rowEls = {}, seps = {};
+    function n(v) { return Math.round(v).toLocaleString("en-US"); }
+    function pl(v, w) { return n(v) + " " + w + (v === 1 ? "" : "s"); }
+
+    var say = {
+      users: ["Signed-in users", function () { return "Your web app has " + pl(opt.users, "signed-in user") + " this month. Each visits about 12 times, but each user key counts once: " + n(opt.users) + " MAU."; }],
+      mobile: ["Mobile app", function () {
+        return opt.mobileKey ? "The same people also use your mobile app, but it uses a device ID as the context key, so each of them counts again. See the Device ID as key switch."
+          : pl(opt.mobileN, "user") + " also open your mobile app, signed in with the same user key. That adds nothing: a key counts once across devices, SDKs, environments and projects."; }, "Web only."],
+      mobileKey: ["Device ID as key", function () {
+        if (!opt.mobile) return "This changes what your mobile app sends as the key. Switch on the mobile app to see it.";
+        return "Your mobile app uses a device ID as the context key instead of the user’s key. Now the same " + pl(opt.mobileN, "person") + " count twice: once by user key on the web and once by device ID on mobile. Use the same user key everywhere to avoid it."; },
+        function () { return opt.mobile ? "Mobile uses the same user key again, so it adds nothing." : "Mobile uses the same user key."; }],
+      contexts: ["Multi-contexts", "Your app sends a device and an organization context along with each user. You’re billed on one context kind, the one with the most unique keys this month, usually user, so the extra kinds add nothing. One catch: if another kind has more keys than user, that kind becomes the one you’re billed on.", "One context per evaluation."],
+      anon: ["Anonymous visitors", function () { return pl(opt.anonN, "visitor") + " browse without signing in. They count: the SDK makes up a key for each one and saves it on the device, so a returning visitor counts once."; }, "No anonymous traffic."],
+      signups: ["Sign-ups", function () { return pl(opt.signN, "anonymous visitor") + " sign up this month. Their anonymous key already counted, and their new user key counts too, so each sign-up adds one more."; }, "No sign-ups this month."],
+      bots: ["Bots and test browsers", function () { return "Crawlers, headless test browsers and private windows get a new key on every visit: " + pl(opt.botN, "key") + ". This is the most common reason MAU runs higher than your analytics. Don’t start the SDK for traffic you never target, and keep test browsers out of production."; }, "No bot traffic."],
+      botFilter: ["Bot filtering (proposed)", function () {
+        if (!opt.bots) return "Proposed: LaunchDarkly would leave known bots out of the count. Switch on bot traffic to see what it removes.";
+        var f = Math.round(opt.botN * BOT_CAUGHT);
+        return "Proposed, not available today: LaunchDarkly leaves known crawlers and headless browsers out of the count, and still serves them flags. Of " + n(opt.botN) + " bot keys, " + n(f) + " are filtered out. The " + n(opt.botN - f) + " that pose as real browsers still count, so keep test traffic out of production too.";
+      }, function () { return opt.bots ? "No bot filtering: every bot key counts." : "No bot filtering."; }],
+      project: ["Second project", "The same users also use a second LaunchDarkly project. Still counted once: the same key in several projects or environments is one MAU.", "One project."],
+      watch: ["Watch a month", "Watching a month go by, a day at a time. A key adds to the count the first time it shows up. After that, visits keep piling up but the count doesn’t move, so most of the month’s count arrives early. Bots keep adding new keys every day."]
+    };
+    say.mobileN = [say.mobile[0], say.mobile[1]]; say.anonN = say.anon; say.signN = say.signups; say.botN = say.bots;
+    var lit = { users: ["app"], mobile: ["mob"], mobileN: ["mob"], mobileKey: ["mob"], contexts: ["ctx"], anon: ["anon"], anonN: ["anon"], signups: ["sign"], signN: ["sign"],
+                bots: ["bots"], botN: ["bots"], botFilter: ["bots"], project: ["proj"] };
+    var meterRow = { users: "c-r-key", mobile: "c-r-dev", mobileN: "c-r-dev", mobileKey: "c-r-dev", contexts: "c-r-kind", anon: "c-r-anon", anonN: "c-r-anon",
+                     signups: "c-r-anon", signN: "c-r-anon", bots: "c-r-anon", botN: "c-r-anon", botFilter: "c-r-anon", project: "c-r-key", watch: "c-r-repeat" };
+
+    // unique keys arrive fast at first and then level off; bots and sign-ups arrive steadily
+    // with the proposed filtering, the share of bot keys caught by known-bot and headless-browser lists
+    var BOT_CAUGHT = .9;
+    function early(t, d) { return (1 - Math.exp(-t / d)) / (1 - Math.exp(-MONTH / d)); }
+    function rows() {
+      var dk = opt.mobile && opt.mobileKey, bf = opt.botFilter, caught = Math.round(opt.botN * BOT_CAUGHT), botV = bf ? opt.botN - caught : opt.botN;
+      return [
+        { id: "app", on: true, name: ["Signed-in users on your web app · ", "users", ""], chips: ["web", "user key"], v: opt.users, keys: opt.users,
+          when: "about 12 visits each · " + n(opt.users * 12) + " visits", label: n(opt.users) + " keys × 1", share: function (t) { return early(t, 5); }, visits: opt.users * 12 },
+        { id: "mob", on: opt.mobile, name: ["Same people on your mobile app · ", "mobileN", ""], chips: dk ? ["iOS and Android", "device ID as key"] : ["iOS and Android", "same user key"],
+          v: dk ? opt.mobileN : 0, keys: opt.mobileN, dup: !dk, warn: dk, when: dk ? "a new key for people already counted" : "already counted on the web",
+          label: dk ? n(opt.mobileN) + " device IDs × 1" : "same keys: +0", share: function (t) { return early(t, 5); }, visits: opt.mobileN * 8 },
+        { id: "ctx", on: opt.contexts, name: "Device and organization contexts", chips: ["multi-context"], v: 0, keys: 12, dup: true, when: "sent along with every signed-in user",
+          label: "not your billed kind: +0", share: function () { return 1; }, visits: 0 },
+        { id: "anon", on: opt.anon, name: ["Anonymous visitors · ", "anonN", ""], chips: ["browser", "key saved on the device"], v: opt.anonN, keys: opt.anonN,
+          when: "about 2 visits each, same saved key", label: n(opt.anonN) + " keys × 1", share: function (t) { return early(t, 9); }, visits: opt.anonN * 2 },
+        { id: "sign", on: opt.signups, name: ["Visitors who sign up · ", "signN", ""], chips: ["anonymous key + user key"], v: opt.signN, keys: opt.signN,
+          when: "their anonymous key already counted", label: "+1 user key each", share: function (t) { return t / MONTH; }, visits: 0 },
+        { id: "bots", on: opt.bots, name: ["Bots, test browsers, private windows · ", "botN", ""], chips: bf ? ["new key every visit", "bot filtering"] : ["new key every visit"],
+          v: botV, keys: opt.botN, bot: true, warn: true, filtered: bf ? BOT_CAUGHT : 0,
+          when: bf ? "known bots and headless browsers aren’t counted" : "one visit each, a fresh key every time",
+          label: bf ? n(caught) + " filtered · " + n(botV) + " count" : n(opt.botN) + " keys × 1", share: function (t) { return t / MONTH; }, visits: opt.botN },
+        { id: "proj", on: opt.project, name: "Same users in a second project", chips: ["another LaunchDarkly project"], v: 0, keys: opt.users, dup: true,
+          when: "the same user keys", label: "same keys: +0", share: function (t) { return early(t, 5); }, visits: 0 }
+      ];
+    }
+
+    function rowEl(id) {
+      if (rowEls[id]) return rowEls[id];
+      var a = el("article", "irow"), who = el("div"), t = el("div", "tcell"), bar = el("div", "tbar"), out = el("span", "ival");
+      var r = { a: a, badge: el("span", "badge"), h: el("h3"), t1: document.createTextNode(""), t2: document.createTextNode(""), num: el("input", "tnum"),
+                fleet: el("div", "fleet"), chips: el("div", "chips"), fill: el("div", "tfill"), when: el("span", "twhen"), v: document.createTextNode(""), small: el("small") };
+      r.num.type = "number"; r.num.inputMode = "numeric";
+      r.num.addEventListener("input", function () {
+        var k = r.num.getAttribute("data-k"), v = parseInt(r.num.value, 10);
+        if (!k || isNaN(v)) return;
+        opt[k] = Math.max(NUM[k][0], Math.min(NUM[k][1], v)); last = k; cleared = false; render();
+      });
+      r.num.addEventListener("blur", function () { r.num.value = opt[r.num.getAttribute("data-k")]; });
+      r.h.appendChild(r.t1); r.h.appendChild(r.num); r.h.appendChild(r.t2);
+      a.appendChild(r.badge);
+      who.appendChild(r.h); who.appendChild(r.fleet); who.appendChild(r.chips); a.appendChild(who);
+      bar.appendChild(r.fill); t.appendChild(bar); t.appendChild(r.when); a.appendChild(t);
+      out.appendChild(r.v); out.appendChild(r.small); a.appendChild(out);
+      var wrap = el("div", "irow-wrap"), inner = el("div", "irow-in");
+      inner.appendChild(a); wrap.appendChild(inner); $("c-rows").appendChild(wrap);
+      r.wrap = wrap;
+      return (rowEls[id] = r);
+    }
+    function sepEl(r) {
+      if (seps[r.id]) return seps[r.id];
+      var wrap = el("div", "irow-wrap"), inner = el("div", "irow-in"), d = el("div", "irow-sep");
+      d.appendChild(el("span", null, r.label));
+      if (r.note) d.appendChild(el("em", null, r.note));
+      inner.appendChild(d); wrap.appendChild(inner); $("c-rows").appendChild(wrap);
+      return (seps[r.id] = wrap);
+    }
+    // a figure per key, up to 24, then "+N more"
+    function people(box, r) {
+      var shown = Math.min(r.keys, 24), cls = "person" + (r.bot ? " bot" : "") + (r.dup ? " dup" : "");
+      box.textContent = "";
+      // filtered keys draw as outlines after the ones that still count
+      var solid = r.filtered ? Math.round(shown * (1 - r.filtered)) : shown;
+      for (var j = 0; j < shown; j++) box.appendChild(el("i", cls + (j >= solid ? " dup" : "")));
+      if (r.keys > shown) box.appendChild(el("span", "more", "+" + n(r.keys - shown) + " more"));
+    }
+
+    var watching = false, cleared = false, tNow = MONTH, t0 = 0, timer = 0, DUR = 18000;
+    function paint(t) {
+      var total = 0, final = 0, visits = 0;
+      rows().forEach(function (r) {
+        if (!r.on || r.sep) return;
+        final += r.v;
+        total += r.v * r.share(t);
+        visits += r.visits * t / MONTH;
+      });
+      rows().forEach(function (r) {
+        var e = rowEls[r.id];
+        if (!r.on || r.sep || !e) return;
+        var sh = r.share(t), cur = r.v * sh;
+        e.v.textContent = "+" + n(cur);
+        e.fill.style.width = (final ? cur / final * 100 : 0) + "%";
+        var icons = e.fleet.querySelectorAll("i"), k = Math.round(sh * icons.length);
+        Array.prototype.forEach.call(icons, function (ic, j) { ic.classList.toggle("down", j >= k); });
+      });
+      var num = $("c-num");
+      num.textContent = n(total); num.setAttribute("data-v", total); num.ldRun = (num.ldRun || 0) + 1;
+      $("c-liquid").style.width = (final ? total / final * 100 : 0) + "%";
+      var day = Math.min(30, Math.floor(t) + 1);
+      $("c-day").textContent = (t >= MONTH ? "month complete" : "day " + day + " of 30") + " · " + n(visits) + " visits";
+    }
+
+    function render() {
+      var list = rows(), hot = (last && lit[last]) || [], total = 0, visits = 0;
+      Array.prototype.forEach.call(document.querySelectorAll("#panel-cmau .bopt"), function (b) {
+        b.setAttribute("aria-checked", opt[b.getAttribute("data-copt")] ? "true" : "false");
+      });
+      list.forEach(function (r) {
+        if (r.sep) { sepEl(r).classList.toggle("gone", !r.on); return; }
+        var e = rowEl(r.id);
+        e.wrap.classList.toggle("gone", !r.on);
+        if (!r.on) return;
+        total += r.v; visits += r.visits;
+      });
+      list.forEach(function (r) {
+        if (r.sep || !r.on) return;
+        var e = rowEls[r.id];
+        e.a.className = "irow" + (r.warn ? " warn" : "") + (r.v === 0 ? " free" : "") + (hot.indexOf(r.id) > -1 ? " lit" : "");
+        e.badge.textContent = r.v === 0 ? "not counted" : "changed";
+        var nm = typeof r.name === "string" ? [r.name, null, ""] : r.name;
+        e.t1.nodeValue = nm[0]; e.t2.nodeValue = nm[2];
+        e.num.hidden = !nm[1];
+        if (nm[1]) {
+          e.num.setAttribute("data-k", nm[1]); e.num.min = NUM[nm[1]][0]; e.num.max = NUM[nm[1]][1];
+          e.num.setAttribute("aria-label", r.id === "app" ? "Signed-in users" : (typeof r.name === "string" ? r.name : r.name[0].replace(" · ", "")));
+          if (document.activeElement !== e.num) e.num.value = opt[nm[1]];
+        }
+        people(e.fleet, r);
+        e.chips.textContent = "";
+        r.chips.forEach(function (c) { e.chips.appendChild(el("span", "chip", c)); });
+        e.when.textContent = r.when;
+        e.fill.style.width = (total ? r.v / total * 100 : 0) + "%";
+        e.v.textContent = "+" + n(r.v);
+        e.small.textContent = r.label;
+      });
+      if (watching) paint(tNow);
+      else if (cleared) paint(0);
+      else {
+        countTo($("c-num"), total, n);
+        $("c-liquid").style.width = "100%";
+        $("c-day").textContent = "full month · " + n(visits) + " visits";
+      }
+      Array.prototype.forEach.call(document.querySelectorAll("#panel-cmau .mrows > div"), function (d) { d.classList.toggle("lit", !!last && d.id === meterRow[last]); });
+      var k = last, entry = k && say[k];
+      $("c-stepk").textContent = !k ? "your audience" : k === "watch" ? "watch a month" : NUM[k] ? entry[0] + " · " + n(opt[k]) : entry[0] + (opt[k] ? " · on" : " · off");
+      var line = entry && entry[k === "watch" || NUM[k] || opt[k] ? 1 : 2];
+      $("c-story").textContent = k ? (typeof line === "function" ? line() : line)
+        : pl(opt.users, "signed-in user") + " on your web app. Each visits about 12 times this month, but each user key counts once. Switch on parts of your audience, or change the numbers, to see what adds to the count and what doesn’t.";
+      $("c-reset").style.visibility = Object.keys(DEF).some(function (x) { return opt[x] !== DEF[x]; }) ? "visible" : "hidden";
+      ldMemo.set("client", opt);
+    }
+
+    function setWatch(on) {
+      watching = on;
+      clearInterval(timer);
+      $("panel-cmau").classList.toggle("watching", on);
+      $("c-watch").textContent = on ? "Watching…" : "Watch a month";
+      if (on) {
+        tNow = 0; t0 = performance.now();
+        timer = setInterval(function () {
+          tNow = Math.min(1, (performance.now() - t0) / DUR) * MONTH;
+          paint(tNow);
+          if (tNow >= MONTH) { clearInterval(timer); $("c-watch").textContent = "Reset"; }
+        }, 33);
+      } else tNow = MONTH;
+    }
+    // while it plays, or once it's done, the button is Reset: it empties the month, ready to watch again
+    $("c-watch").addEventListener("click", function () {
+      var start = !watching;
+      setWatch(start); cleared = !start; last = start ? "watch" : null; render();
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("#panel-cmau .bopt"), function (b) {
+      b.addEventListener("click", function () { var k = b.getAttribute("data-copt"); opt[k] = !opt[k]; last = k; cleared = false; render(); });
+    });
+    $("c-reset").addEventListener("click", function () {
+      Object.keys(DEF).forEach(function (k) { opt[k] = DEF[k]; });
+      setWatch(false); cleared = false; last = null; render();
+    });
+    Object.keys(DEF).forEach(function (k) { opt[k] = DEF[k]; });
+    var saved = ldMemo.get("client");
+    if (saved && typeof saved === "object") Object.keys(DEF).forEach(function (k) {
+      var v = saved[k];
+      if (typeof v !== typeof DEF[k]) return;
+      if (NUM[k] && !(v >= NUM[k][0] && v <= NUM[k][1])) return;
+      opt[k] = v;
+    });
+    render();
+  })();
+
+  // ---------- service connections: independent switches ----------
+  var MONTH_DAYS = 30.5;                                  // the docs' month: 30.5 days of 24 hours
+  // Polling, per the polling billing tech spec (Poppy Han, 2026):
+  // - SDKs that send an instance ID: every signal from one instance is merged into one span of
+  //   running time, so an always-on SDK counts the same streaming or polling, at any interval.
+  // - PHP: a new process per request, so each poll counts as 30 seconds.
+  var INTERVALS = { 15: { l: "15s" }, 30: { l: "30s" }, 60: { l: "1 min" }, 300: { l: "5 min" }, 3600: { l: "1 hour" } };
+  function iv() { return INTERVALS[opt.interval]; }
+  var DEFAULTS = { k8s: false, workers: false, burst: false, daily: false, envs: false, relay: false, php: false, fn: false, poll: false, interval: 30, n: 4, burstN: 10, dailyN: 10, fnM: 60 };
+  // numbers typed into the row titles, and the range each one accepts
+  var NUMS = { n: [1, 100], burstN: [1, 100], dailyN: [1, 100], fnM: [1, 1000] };
+  function plural(n, word) { return n + " " + word + (n === 1 ? "" : "s"); }
+  function unitWord() { return opt.k8s ? "pod" : "server"; }
+  function fnHours() { return opt.fnM * 1e6 * 0.22 / 3600; }
+  function hrs(h) { return Math.round(h).toLocaleString("en-US"); }
+  var opt = {}, seen = {}, last = null;
+  var say = {
+    k8s: ["Kubernetes", function () { return "Your service runs on Kubernetes as " + plural(opt.n, "pod") + ". Each pod starts its own SDK, so each pod is its own service connection, exactly like a server. The count follows running SDK instances, not services or SDK keys."; },
+          function () { return "Back to " + plural(opt.n, "server") + ", each running one SDK."; }],
+    n: ["Checkout service", function () { var u = unitWord(); return "Your checkout service runs on " + plural(opt.n, u) + ". Each " + u + " starts its own SDK and stays connected all month, so " + (opt.n === 1 ? "it counts as one service connection." : "each one counts as one service connection."); }, ""],
+    burstN: ["Autoscaling", function () { return say.burst[1](); }, ""],
+    dailyN: ["Daily scaling", function () { return say.daily[1](); }, ""],
+    fnM: ["Lambda function", function () { return say.fn[1](); }, ""],
+    workers: ["Worker processes", "Each instance runs 4 worker processes. Python, Ruby and similar SDKs start one SDK per process, so every instance now counts four times over.",
+              "One process per instance again, so one SDK per instance."],
+    daily: ["Daily scaling", function () { var k = opt.dailyN; return "Every morning you scale up " + plural(k, "extra " + unitWord()) + ", and every night you scale " + (k === 1 ? "it" : "them") + " back down. They run 12 hours a day, half the month, so they count as " + k + " × ½ = " + f1(k / 2) + " service connections, not " + k + ". You pay for the hours they run, not your daily peak."; },
+            "No daily scaling."],
+    burst: ["Autoscaling", function () { return "Autoscaling adds " + plural(opt.burstN, unitWord()) + " for a three-day sale. They count only for the time they run, about a tenth of a month each, so they add " + f1(opt.burstN * 3 / MONTH_DAYS) + ", not " + opt.burstN + ". You pay for the hours they run, not your peak."; },
+            "No burst this month."],
+    envs: ["Staging and dev", "A staging instance and a dev instance connect to their own environments all month. Pre-production environments count the same as production.",
+           "Production only."],
+    relay: ["Relay Proxy", "Your SDKs connect to a Relay Proxy in your network instead of to LaunchDarkly. The count doesn’t change: every SDK behind it still counts, and the Relay Proxy’s own connection isn’t billed. It saves network connections, not service connections.",
+            "Your SDKs connect straight to LaunchDarkly. Same count either way."],
+    php: ["PHP app", "Your checkout service now runs on PHP and serves 1 million requests this month. PHP starts a new process for every request, so it can’t hold a stream, and each request polls for flags. Each poll counts as 30 seconds: 1 million polls is 8,333 hours, or about 11.4 service connections. Caching flag data between requests means fewer polls.",
+          function () { return "Your checkout service is back on " + (opt.k8s ? "10 pods" : "four servers") + ", each SDK connected all month."; }],
+    fn: ["Lambda function", function () { var h = fnHours(); return "A Lambda function handles " + opt.fnM + " million invocations a month, averaging 220 milliseconds each. That’s " + hrs(h) + " hours of running time. One service connection is a full month, 730 hours, so the function adds " + hrs(h) + " ÷ 730 ≈ " + f1(h / 730) + ". Serverless counts running time, not invocations: halve the duration and you halve the count."; },
+         "No serverless functions."],
+    poll: ["Polling", function () { return pollStory(); },
+           "Your SDKs hold one streaming connection each, and each one connected all month is one service connection. Changes arrive the moment they’re made."],
+    interval: ["Polling interval", function () {
+      if (opt.poll) return pollStory();
+      return "Your SDKs are streaming, so the polling interval doesn’t apply. Switch to polling to see what it changes.";
+    }, ""],
+    watch: ["Watch a month", "Watching a month go by, a day at a time. Every running SDK adds its connected time as it runs: always-on servers fill the count steadily, the sale adds its share only while it runs, and daily scaling climbs by day and pauses at night. The bar under the count fills to the month’s total.",
+            "Back to the month’s totals."]
+  };
+  function pollStory() {
+    var i = iv(), t = "Your SDKs poll every " + i.l + " instead of holding a stream. A running SDK counts for the time it runs, whether it streams or polls, so the interval doesn’t change the count.";
+    if (opt.interval > 30) t += " What it changes is speed: a flag change can take up to " + i.l + " to reach your app.";
+    else t += " Streaming costs the same and delivers each change the moment it’s made.";
+    return t;
+  }
+  var litRows = { n: ["app"], burstN: ["burst"], dailyN: ["daily"], fnM: ["fn"], k8s: ["app", "burst", "daily", "stg", "dev"], workers: ["app", "burst", "daily", "stg", "dev"], burst: ["burst"], daily: ["daily"], envs: ["stg", "dev"],
+                  relay: ["relay"], php: ["app"], fn: ["fn"], poll: ["app", "burst", "daily", "stg", "dev"],
+                  interval: ["app", "burst", "daily", "stg", "dev"] };
+  var meterRow = { n: "sc-r-unit", burstN: "sc-r-time", dailyN: "sc-r-time", fnM: "sc-r-time", k8s: "sc-r-unit", workers: "sc-r-unit", burst: "sc-r-time", daily: "sc-r-time", envs: "sc-r-env", relay: "sc-r-relay", php: "sc-r-poll", fn: "sc-r-time", poll: "sc-r-poll", interval: "sc-r-poll" };
+
+  // Each row draws what's actually running: a box per server or pod, a dot per SDK in it.
+  // Switching a use case off folds its row away.
+  function rowsFor() {
+    var n = opt.n, unit = unitWord(), w = opt.workers ? 4 : 1, x = 1, b = opt.burstN, d = opt.dailyN, fh = fnHours();
+    var per = opt.workers ? " · " + w + " workers per " + unit : "";
+    var app = { id: "app", on: true, name: ["Checkout service · ", "n", " " + unit + (n === 1 ? "" : "s")], env: "production", sdks: n * w, frac: 1, x: x, chips: [], when: "connected all month" + per, fleet: [unit, n, w] };
+    // the PHP switch rewrites the checkout service itself in PHP, rather than adding a second app
+    // 1M requests × 1 poll × 30s = 30M seconds ≈ 8,333 hours ÷ 730 hours ≈ 11.4
+    if (opt.php) app = { id: "app", on: true, name: "Checkout service · PHP · 1M requests", env: "production", sdks: 1, frac: (1e6 * 30 / 3600) / 730, x: 1,
+      chips: ["polls every request"], when: "1M polls × 30s = 8,333 hours", label: "8,333 h ÷ 730 h", warn: true, fleet: ["req", 10, 0, "one short-lived process per request"] };
+    return [
+      // the production label only shows once there's non-production to tell it apart from
+      { id: "sep-p", on: opt.envs, sep: true, label: "Production" },
+      app,
+      { id: "burst", on: opt.burst, name: ["", "burstN", " extra " + unit + (b === 1 ? "" : "s") + " for 3 days"], env: "production", sdks: b * w, frac: 3 / MONTH_DAYS, x: x, chips: [], when: "3 days" + per, span: "3 days", sale: [12, 15], fleet: [unit, b, w] },
+      // up 8am to 8pm every day: 12 of 24 hours, so half the month
+      { id: "daily", on: opt.daily, name: ["", "dailyN", " extra " + unit + (d === 1 ? "" : "s") + ", 8am to 8pm"], env: "production", sdks: d * w, frac: .5, x: x, chips: [],
+        when: "up every morning, down every night" + per, span: "12h a day", daily: true, fleet: [unit, d, w] },
+      // invocations × 220ms = running hours; one service connection is 43,800 minutes = 730 hours (60M → 3,667 h → 5.0)
+      { id: "fn", on: opt.fn, name: ["Lambda function · ", "fnM", "M invocations"], env: "production", sdks: 1, frac: fh / 730, x: 1,
+        chips: ["serverless"],
+        when: "× 220ms each = " + hrs(fh) + " hours running", label: hrs(fh) + " h ÷ 730 h", fleet: ["fn", 12, 0, "short-lived invocations"] },
+      // non-production always sits last, under its own divider
+      { id: "sep-np", on: opt.envs, sep: true, label: "Not production", note: "counts the same as production" },
+      { id: "stg", on: opt.envs, name: "Checkout service · 1 " + unit, env: "staging", sdks: w, frac: 1, x: x, chips: [], when: "connected all month" + per, fleet: [unit, 1, w] },
+      { id: "dev", on: opt.envs, name: "Checkout service · 1 " + unit, env: "development", sdks: w, frac: 1, x: x, chips: [], when: "connected all month" + per, fleet: [unit, 1, w] }
+    ];
+  }
+  function rowVal(r) { return r.on && !r.sep ? r.sdks * r.frac * r.x : 0; }
+  function f1(v) { return (Math.round(v * 10) / 10).toFixed(1); }
+  function fmt(v) { return v >= 100 ? Math.round(v).toLocaleString("en-US") : f1(v); }
+
+  // build the rows once; each render only updates their text, classes and bar widths
+  var rowEls = {};
+  function rowEl(id) {
+    if (rowEls[id]) return rowEls[id];
+    var a = el("article", "irow"), who = el("div"), t = el("div", "tcell"), bar = el("div", "tbar"), out = el("span", "ival");
+    var r = { a: a, badge: el("span", "badge"), h: el("h3"), t1: document.createTextNode(""), t2: document.createTextNode(""), num: el("input", "tnum"), fleet: el("div", "fleet"), chips: el("div", "chips"), fill: el("div", "tfill"), when: el("span", "twhen"), v: document.createTextNode(""), small: el("small") };
+    a.appendChild(r.badge);
+    r.num.type = "number"; r.num.inputMode = "numeric";
+    r.num.addEventListener("input", function () {
+      var k = r.num.getAttribute("data-k"), lim = NUMS[k], v = parseInt(r.num.value, 10);
+      if (!k || isNaN(v)) return;                       // wait for a real number while they type
+      opt[k] = Math.max(lim[0], Math.min(lim[1], v)); last = k; cleared = false; renderSC(); drawWires();
+    });
+    r.num.addEventListener("blur", function () { r.num.value = opt[r.num.getAttribute("data-k")]; });
+    r.h.appendChild(r.t1); r.h.appendChild(r.num); r.h.appendChild(r.t2);
+    who.appendChild(r.h); who.appendChild(r.fleet); who.appendChild(r.chips); a.appendChild(who);
+    bar.appendChild(r.fill); t.appendChild(bar); t.appendChild(r.when); a.appendChild(t);
+    out.appendChild(r.v); out.appendChild(r.small); a.appendChild(out);
+    var wrap = el("div", "irow-wrap"), inner = el("div", "irow-in");
+    inner.appendChild(a); wrap.appendChild(inner);
+    $("sc-rows").appendChild(wrap);
+    wrap.setAttribute("data-id", id);
+    r.wrap = wrap;
+    return (rowEls[id] = r);
+  }
+  // the divider between production and non-production rows, folding with them
+  var seps = {};
+  function sepEl(r) {
+    if (seps[r.id]) return seps[r.id];
+    var wrap = el("div", "irow-wrap"), inner = el("div", "irow-in"), d = el("div", "irow-sep");
+    d.appendChild(el("span", null, r.label));
+    if (r.note) d.appendChild(el("em", null, r.note));
+    inner.appendChild(d); wrap.appendChild(inner);
+    $("sc-rows").appendChild(wrap);
+    return (seps[r.id] = wrap);
+  }
+  // add or remove boxes to match the count, so only the new ones animate in
+  function setFleet(box, f, animate) {
+    var kind = f[0], all = f[1], n = Math.min(all, 24), per = f[2], tip = f[3];
+    Array.prototype.slice.call(box.children).forEach(function (c) { if (!c.classList.contains(kind) || c.tagName !== "I") box.removeChild(c); });
+    while (box.children.length > n) box.removeChild(box.lastChild);
+    while (box.children.length < n) {
+      // Lambda invocations run their own pop-in, pop-out loop instead of the one-time entrance
+      var i = el("i", kind + (animate && kind !== "fn" ? " new" : ""));
+      if (kind === "req") i.style.animationDelay = (box.children.length * 0.37 % 1.6).toFixed(2) + "s";
+      // invocations come and go at uneven times, so the row never settles into a pattern
+      if (kind === "fn") { i.style.animationDuration = (2 + Math.random() * 1.6).toFixed(2) + "s"; i.style.animationDelay = (-Math.random() * 3.6).toFixed(2) + "s"; }
+      box.appendChild(i);
+    }
+    if (all > n) box.appendChild(el("span", "more", "+" + (all - n) + " more"));
+    Array.prototype.forEach.call(box.children, function (i) {
+      if (i.tagName !== "I") return;
+      while (i.children.length > per) i.removeChild(i.lastChild);
+      while (i.children.length < per) i.appendChild(el("b"));
+      i.title = tip || (kind + " running " + per + " SDK" + (per === 1 ? "" : "s"));
+    });
+  }
+
+  function renderSC() {
+    var list = rowsFor(), hot = (last && litRows[last]) || [];
+    Array.prototype.forEach.call(document.querySelectorAll("#panel-sc .bopt"), function (b) {
+      b.setAttribute("aria-checked", opt[b.getAttribute("data-opt")] ? "true" : "false");
+    });
+    Array.prototype.forEach.call(document.querySelectorAll("#panel-sc .bseg button"), function (b) {
+      b.setAttribute("aria-checked", (b.getAttribute("data-mode") === "poll") === opt.poll ? "true" : "false");
+    });
+    var relay = $("sc-relay");
+    // the Relay Proxy keeps its place when off, dashed and dimmed, so the diagram never reflows
+    $("sc-relaywrap").classList.toggle("gone", !opt.relay);
+    relay.classList.toggle("lit", opt.relay && hot.indexOf("relay") > -1);
+    $("sc-relayrole").textContent = opt.relay ? "Your SDKs connect here. It holds one connection to LaunchDarkly." : "Off. Your SDKs connect straight to LaunchDarkly.";
+    $("sc-p1").classList.toggle("idle", !opt.relay);
+    // PHP always polls, so the links show polling whenever it's on
+    var polls = opt.poll || opt.php;
+    ["sc-p1", "sc-p2"].forEach(function (id) { $(id).classList.toggle("poll", polls); });
+    $("sc-tag").textContent = polls ? "polling" : "streaming";
+    $("sc-ldchip").textContent = polls ? "polling" : "streaming";
+    $("sc-ldrole").textContent = polls ? "Answers each poll with current flag state" : "Streams every flag change to each connected SDK";
+    rowsFor().forEach(function (r) {
+      if (r.sep) { sepEl(r).classList.toggle("gone", !r.on); return; }
+      var fresh = !rowEls[r.id], e = rowEl(r.id), v = rowVal(r);
+      e.wrap.classList.toggle("gone", !r.on);
+      // a folded-away row keeps its last contents while it closes
+      if (!r.on) return;
+      e.a.className = "irow" + (r.warn ? " warn" : "") + (hot.indexOf(r.id) > -1 ? " lit" : "");
+      setFleet(e.fleet, r.fleet, !fresh);
+      paintUp(e.fleet, 0, false);
+      e.badge.textContent = "changed";
+      var nm = typeof r.name === "string" ? [r.name, null, ""] : r.name;
+      e.t1.nodeValue = nm[0]; e.t2.nodeValue = nm[2];
+      e.num.hidden = !nm[1];
+      if (nm[1]) {
+        e.num.setAttribute("data-k", nm[1]);
+        e.num.min = NUMS[nm[1]][0]; e.num.max = NUMS[nm[1]][1];
+        e.num.setAttribute("aria-label", { n: "Number of " + unitWord() + "s", burstN: "Extra " + unitWord() + "s for the sale", dailyN: "Extra " + unitWord() + "s each day", fnM: "Millions of invocations" }[nm[1]]);
+        if (document.activeElement !== e.num) e.num.value = opt[nm[1]];
+      }
+      e.chips.textContent = "";
+      [r.env].concat(r.chips).forEach(function (c) { e.chips.appendChild(el("span", "chip", c)); });
+      e.when.textContent = r.on ? r.when : "switched off";
+      // daily scaling draws one on/off stripe per day across the whole month
+      e.fill.classList.toggle("daily", !!r.daily);
+      e.fill.style.width = !r.on ? "0%" : r.daily ? "100%" : Math.min(100, Math.max(2, r.frac * 100)) + "%";
+      e.v.textContent = !r.on ? "0.0" : r.dp ? v.toFixed(r.dp) : v < .1 ? "< 0.1" : fmt(v);
+      e.small.textContent = !r.on ? "off" : r.label || (r.sdks + " × " + (r.span || "full month") + (r.x !== 1 ? " × " + (+r.x.toFixed(4)) : ""));
+    });
+    if (watching) paintMonth(tNow);
+    else if (cleared) paintMonth(0);   // Reset empties the month, ready to watch again
+    else {
+      countTo($("sc-num"), list.reduce(function (s, r) { return s + rowVal(r); }, 0), fmt);
+      $("sc-liquid").style.width = "100%";
+      $("sc-day").textContent = "full month";
+    }
+    Array.prototype.forEach.call(document.querySelectorAll("#panel-sc .mrows > div"), function (d) {
+      d.classList.toggle("lit", !!last && d.id === meterRow[last]);
+    });
+    $("sc-stepk").textContent = !last ? "your setup" : last === "interval" ? "polling interval · " + iv().l : last === "watch" ? "watch a month" : NUMS[last] ? say[last][0] + " · " + opt[last] + (last === "fnM" ? "M invocations" : "") : say[last][0] + (opt[last] ? " · on" : " · off");
+    var line = last && say[last][last === "interval" || last === "watch" || NUMS[last] || opt[last] ? 1 : 2];
+    $("sc-story").textContent = last ? (typeof line === "function" ? line() : line)
+      : "One service on " + plural(opt.n, unitWord()) + ", streaming, in production. Each " + unitWord() + "’s SDK connected all month is one service connection. Switch parts of your setup on and off, or change the numbers in the titles, to see what changes the count and what doesn’t.";
+    $("sc-intsel").value = String(opt.interval);
+    $("sc-int").classList.toggle("dim", !opt.poll);
+    var any = Object.keys(opt).some(function (k) { return opt[k] !== DEFAULTS[k]; });
+    $("sc-reset").style.visibility = any ? "visible" : "hidden";
+    ldMemo.set("server", opt);
+  }
+  function flip(k, v) { opt[k] = v; last = k; cleared = false; renderSC(); drawWires(); }
+
+  // ---- watch a month: replay the current setup day by day, filling the count as it goes
+  var watching = false, cleared = false, tNow = MONTH_DAYS, t0 = 0, raf = 0, DUR = 18000;
+  // how much of a row's monthly total has built up by day t (0 to 30.5)
+  function share(r, t) {
+    if (r.sale) return Math.min(1, Math.max(0, (t - r.sale[0]) / (r.sale[1] - r.sale[0])));
+    if (r.daily) {
+      var d = Math.floor(t), h = (t - d) * 24;
+      return Math.min(1, (d * 12 + Math.min(12, Math.max(0, h - 8))) / (MONTH_DAYS * 12));
+    }
+    return Math.min(1, t / MONTH_DAYS);
+  }
+  // What share of a scaling row's instances are up at day t, so they can come up one at a time,
+  // left to right, and go back down right to left. Daily scaling ramps up 5am-11am and down
+  // 5pm-11pm, centered on 8am and 8pm so it still averages 12 hours a day; the sale ramps over
+  // a quarter day at each end.
+  function level(r, t) {
+    if (r.sale) {
+      var a = r.sale[0], b = r.sale[1], q = .25;
+      return t < a || t >= b ? 0 : Math.min(1, (t - a) / q, (b - t) / q);
+    }
+    if (r.daily) {
+      var h = (t % 1) * 24;
+      return h < 5 || h >= 23 ? 0 : h < 11 ? (h - 5) / 6 : h < 17 ? 1 : (23 - h) / 6;
+    }
+    return 1;
+  }
+  function paintUp(box, k, scaling) {
+    Array.prototype.forEach.call(box.querySelectorAll("i"), function (ic, j) {
+      ic.classList.toggle("up", scaling && j < k);
+      ic.classList.toggle("down", scaling && j >= k);
+    });
+  }
+  function paintMonth(t) {
+    var total = 0, final = 0;
+    rowsFor().forEach(function (r) {
+      var e = rowEls[r.id];
+      if (!r.on || r.sep || !e) return;
+      var full = rowVal(r), sh = share(r, t), cur = full * sh;
+      total += cur; final += full;
+      e.v.textContent = cur <= 0 ? "0.0" : cur < .1 ? "< 0.1" : fmt(cur);
+      e.fill.style.width = (r.daily ? sh * 100 : Math.min(100, r.frac * 100) * sh) + "%";
+      var scaling = !!(r.sale || r.daily), icons = e.fleet.querySelectorAll("i").length;
+      paintUp(e.fleet, Math.round(level(r, t) * icons), scaling);
+    });
+    var num = $("sc-num");
+    num.textContent = fmt(total); num.setAttribute("data-v", total); num.ldRun = (num.ldRun || 0) + 1;
+    $("sc-liquid").style.width = (final ? total / final * 100 : 0) + "%";
+    var day = Math.min(30, Math.floor(t) + 1), hour = Math.floor((t % 1) * 24);
+    $("sc-day").textContent = t >= MONTH_DAYS ? "month complete" : "day " + day + " of 30 · " + (hour < 10 ? "0" : "") + hour + ":00";
+  }
+  // The button plays the month once, then turns into Reset, which puts the month's totals back.
+  function tick() {
+    if (!watching) return;
+    tNow = Math.min(1, (performance.now() - t0) / DUR) * MONTH_DAYS;
+    paintMonth(tNow);
+    if (tNow >= MONTH_DAYS) { clearInterval(raf); $("sc-watch").textContent = "Reset"; }
+  }
+  function setWatch(on) {
+    watching = on;
+    clearInterval(raf);
+    $("panel-sc").classList.toggle("watching", on);
+    $("sc-watch").textContent = on ? "Watching…" : "Watch a month";
+    // a steady timer rather than animation frames, so the month keeps time even in a background tab
+    if (on) { tNow = 0; t0 = performance.now(); raf = setInterval(tick, 33); }
+    else tNow = MONTH_DAYS;
+  }
+  // While it plays, or once it's done, the button is Reset: it empties the count and every bar
+  // back to the start of the month. Changing any switch afterwards shows the month's totals again.
+  $("sc-watch").addEventListener("click", function () {
+    var start = !watching;
+    setWatch(start);
+    cleared = !start;
+    last = start ? "watch" : null;
+    renderSC();
+  });
+
+  // Links, side by side only (stacked on narrow screens, straight links already reach the boxes):
+  // each Relay Proxy to every box it serves, and LaunchDarkly to each Relay Proxy. Production
+  // boxes share one proxy; staging and dev each get their own when they're on.
+  var svgNS = "http://www.w3.org/2000/svg";
+  function link(svg, xs, ys, xe, ye) {
+    var xm = (xs + xe) / 2, path = document.createElementNS(svgNS, "path"), head = document.createElementNS(svgNS, "path");
+    path.setAttribute("class", "wire" + (opt.poll || opt.php ? " poll" : ""));
+    path.setAttribute("d", "M" + xs + " " + ys + " C" + xm + " " + ys + " " + xm + " " + ye + " " + xe + " " + ye);
+    head.setAttribute("class", "wire-head");
+    head.setAttribute("d", "M" + (xe + 7) + " " + (ye - 5) + " L" + xe + " " + ye + " L" + (xe + 7) + " " + (ye + 5));
+    svg.appendChild(path); svg.appendChild(head);
+  }
+  var RELAY_FOR = { stg: "sc-relay-stg", dev: "sc-relay-dev" };
+  function drawWires() {
+    var svg = $("sc-wires");
+    svg.textContent = "";
+    var side = matchMedia("(min-width: 1280px)").matches, on = opt.relay;
+    ["sc-relay-stg", "sc-relay-dev"].forEach(function (id) { $(id).classList.toggle("gone", !(on && opt.envs)); });
+    $("sc-p1").classList.toggle("wired", side && on);
+    $("sc-p2").classList.toggle("wired", side && on);
+    if (!side || !on) { ["sc-relay", "sc-relay-stg", "sc-relay-dev"].forEach(function (id) { $(id).style.top = ""; }); return; }
+    var flow = $("sc-flow").getBoundingClientRect(), col = $("sc-relays").getBoundingClientRect();
+    // which boxes each proxy serves, and the span they cover
+    var groups = {};
+    Array.prototype.forEach.call(document.querySelectorAll("#sc-rows .irow-wrap:not(.gone)[data-id]"), function (w) {
+      var row = w.querySelector(".irow"), r = row.getBoundingClientRect();
+      if (r.height < 4) return;
+      var g = RELAY_FOR[w.getAttribute("data-id")] || "sc-relay";
+      (groups[g] = groups[g] || []).push(r);
+    });
+    var ld = document.querySelector("#panel-sc .sc-ld .card").getBoundingClientRect();
+    Object.keys(groups).forEach(function (id) {
+      var rows = groups[id], card = $(id), h = card.offsetHeight;
+      var top = Math.min.apply(null, rows.map(function (r) { return r.top; })), bot = Math.max.apply(null, rows.map(function (r) { return r.bottom; }));
+      var y = Math.max(0, Math.min(col.height - h, (top + bot) / 2 - col.top - h / 2));
+      card.style.top = y + "px";
+      var cx = col.left - flow.left, cy = col.top - flow.top + y + h / 2;
+      rows.forEach(function (r) { link(svg, cx, cy, r.right - flow.left + 2, r.top + r.height / 2 - flow.top); });
+      link(svg, ld.left - flow.left, ld.top + ld.height / 2 - flow.top, col.right - flow.left + 2, cy);
+    });
+  }
+  // keep the links attached while rows fold in and out, and on resize
+  if (window.ResizeObserver) { var ro = new ResizeObserver(function () { drawWires(); }); ro.observe($("sc-rows")); ro.observe($("sc-flow")); }
+  window.addEventListener("resize", drawWires);
+  window.addEventListener("ldtab", function () { requestAnimationFrame(drawWires); });
+  Array.prototype.forEach.call(document.querySelectorAll("#panel-sc .bopt"), function (b) {
+    b.addEventListener("click", function () { var k = b.getAttribute("data-opt"); flip(k, !opt[k]); });
+  });
+  Array.prototype.forEach.call(document.querySelectorAll("#panel-sc .bseg button"), function (b) {
+    b.addEventListener("click", function () { flip("poll", b.getAttribute("data-mode") === "poll"); });
+  });
+  $("sc-intsel").addEventListener("change", function () { flip("interval", +this.value); });
+  $("sc-reset").addEventListener("click", function () {
+    Object.keys(DEFAULTS).forEach(function (k) { opt[k] = DEFAULTS[k]; });
+    setWatch(false); cleared = false;
+    last = null; renderSC(); drawWires();
+  });
+  Object.keys(DEFAULTS).forEach(function (k) { opt[k] = DEFAULTS[k]; });
+  var saved = ldMemo.get("server");
+  if (saved && typeof saved === "object") Object.keys(DEFAULTS).forEach(function (k) {
+    var v = saved[k];
+    if (typeof v !== typeof DEFAULTS[k]) return;
+    if (k === "interval" && !INTERVALS[v]) return;
+    if (NUMS[k] && !(v >= NUMS[k][0] && v <= NUMS[k][1])) return;
+    opt[k] = v;
+  });
+  renderSC();
+  drawWires();
 })();
 
 // Startup walkthrough: boot on defaults, fetch from the CDN, go live on the stream.
@@ -1436,7 +2537,8 @@
   ];
   var links = ["s-pstream", "s-ppoll", "s-pcache"];
   var cards = ["s-sdk", "s-cache", "s-cdncard", "s-region"];
-  var i = 0, warm = false;
+  var i = 0, warm = false, saved = ldMemo.get("startup");
+  if (saved && saved.i >= 0 && saved.i < steps.length) { i = saved.i; warm = !!saved.warm; }
 
   // a warm cache overrides some fields on the early steps
   function current() {
@@ -1470,6 +2572,7 @@
     // the last step's main button already starts over
     $("s-reset").style.visibility = i === 0 || i === steps.length - 1 ? "hidden" : "visible";
     for (var m = 0; m < steps.length; m++) { $("s-l" + m).classList.toggle("on", m <= i); }
+    ldMemo.set("startup", { i: i, warm: warm });
   }
 
   $("s-next").addEventListener("click", function () { i = (i + 1) % steps.length; render(); });
