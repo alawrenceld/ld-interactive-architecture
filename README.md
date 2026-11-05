@@ -37,11 +37,14 @@ Two billing tabs follow, written for SEs and customers rather than developers.
 Each has a live meter, plus a "Questions we hear most" list
 built from the top Gong, Zendesk and Slack questions in Enterpret.
 
-- "Client-side billing" (`#client-mau`) walks a month of client-side MAU:
-  one key counts once however often it returns, the same key across devices
-  and projects, multi-contexts billed on one context kind, anonymous visitors,
-  an anonymous visitor signing in, bot traffic inflating the count,
-  server-side contexts not counting, and the monthly reset.
+- "Client-side billing" (`#client-mau`) uses the same switch pattern on one
+  example audience (10,000 signed-in web users): mobile app, device ID as the
+  key, multi-contexts, anonymous visitors, sign-ups, bots and test browsers,
+  a second project, backend (server-side) evaluations, and staging and dev.
+  Counts are editable in the row titles; each row draws a figure per context
+  key, outlined when the key already counted elsewhere, and its bar shows its
+  share of the month's MAU. "Watch a month" shows unique keys arriving early
+  and leveling off while visits keep climbing.
 - "Server-side billing" (`#service-connections`) is a set of independent
   switches on one example service (four servers, streaming, production):
   streaming vs. polling, Kubernetes (10 pods), worker processes (4 per
