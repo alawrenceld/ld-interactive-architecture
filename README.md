@@ -33,6 +33,40 @@ switch on the local cache shows the warm start: the SDK evaluates from the
 state saved on the last run until the CDN payload refreshes it. The Relay Proxy is left out of this view. Link to it directly
 with `#startup`.
 
+Two billing tabs follow, written for SEs and customers rather than developers.
+Each has a live meter, plus a "Questions we hear most" list
+built from the top Gong, Zendesk and Slack questions in Enterpret.
+
+- "Client-side billing" (`#client-mau`) walks a month of client-side MAU:
+  one key counts once however often it returns, the same key across devices
+  and projects, multi-contexts billed on one context kind, anonymous visitors,
+  an anonymous visitor signing in, bot traffic inflating the count,
+  server-side contexts not counting, and the monthly reset.
+- "Server-side billing" (`#service-connections`) is a set of independent
+  switches on one example service (four servers, streaming, production):
+  streaming vs. polling, Kubernetes (10 pods), worker processes (4 per
+  instance), autoscaling (10 extra for 3 days), daily scaling (10 extra, 8am to 8pm), staging and dev, Relay Proxy,
+  PHP (rewrites the checkout service in PHP, which polls on every request) and a Lambda function. The meter and each row
+  recompute from the switches; the narration explains the last one flipped.
+  The server count, both scaling counts and the Lambda's millions of
+  invocations are editable numbers in the row titles.
+  The infrastructure box draws each server or pod with a dot per SDK, and
+  folds away use cases that are off; staging and dev always sit last, under a
+  "Not production" divider. With the Relay Proxy on, a link runs to every box; staging and dev each
+  get their own Relay Proxy, and LaunchDarkly links to each proxy.
+  The "Watch a month" button plays the current setup day by day (18 seconds)
+  while a bar under the count fills to the month's total, then becomes
+  "Reset", which restores the month's totals.
+  Polling follows the polling billing tech spec (Poppy Han, 2026): SDKs that
+  send an instance ID count by running time, so polling at any interval
+  counts the same as streaming. PHP polls on every request, so
+  its row counts 30 seconds per poll.
+
+Billing copy reflects current public docs as of November 2026. It avoids
+dollar amounts and daemon mode. Polling follows the
+unreleased tech spec; as of late October 2026 polling was not yet billed.
+Re-check before external use.
+
 ### ld-architecture-value.html
 The architectural-value story as four benefit scenes. One delivery diagram
 (LaunchDarkly -> [NETWORK NAME] with CDN + streaming lanes -> your cloud with
@@ -42,6 +76,9 @@ Fast start (~25ms), Fast changes (<200ms, 138-byte delta), Failover built in
 
 ## Implementation notes
 
+- The page remembers your last tab and each tab's choices (switches, steps,
+  numbers) in localStorage under `ld-arch:*`. A link with a tab hash still
+  opens that tab. Each tab's Reset puts its own choices back.
 - LaunchDarkly brand system: Sora (display), Inter (body), JetBrains Mono
   (readouts); LD Blue #405BFF, Lime #DDFF46, ink/Gray 01 surfaces.
 - Light and dark theme via CSS custom properties on :root, following
