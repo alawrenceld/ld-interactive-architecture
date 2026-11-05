@@ -1251,8 +1251,6 @@
     <button class="bopt" role="switch" aria-checked="false" data-copt="signups"><span class="tog" aria-hidden="true"></span>Sign-ups</button>
     <button class="bopt" role="switch" aria-checked="false" data-copt="bots"><span class="tog" aria-hidden="true"></span>Bots and test browsers</button>
     <button class="bopt" role="switch" aria-checked="false" data-copt="project"><span class="tog" aria-hidden="true"></span>Second project</button>
-    <button class="bopt" role="switch" aria-checked="false" data-copt="backend"><span class="tog" aria-hidden="true"></span>Backend evaluations</button>
-    <button class="bopt" role="switch" aria-checked="false" data-copt="envs"><span class="tog" aria-hidden="true"></span>Staging and dev</button>
   </div>
 
   <div class="barch">
@@ -1895,9 +1893,9 @@ window.ldMemo = {
   // Same pattern as the server-side tab: switches up top, one row per part of your audience,
   // a person per context key, and a month you can watch fill up. Everything here is its own scope.
   (function () {
-    var DEF = { mobile: false, mobileKey: false, contexts: false, anon: false, signups: false, bots: false, project: false, backend: false, envs: false,
-                users: 10000, mobileN: 6000, anonN: 50000, signN: 2000, botN: 200000, testN: 300 };
-    var NUM = { users: [1, 1000000], mobileN: [1, 1000000], anonN: [1, 5000000], signN: [1, 1000000], botN: [1, 10000000], testN: [1, 100000] };
+    var DEF = { mobile: false, mobileKey: false, contexts: false, anon: false, signups: false, bots: false, project: false,
+                users: 10000, mobileN: 6000, anonN: 50000, signN: 2000, botN: 200000 };
+    var NUM = { users: [1, 1000000], mobileN: [1, 1000000], anonN: [1, 5000000], signN: [1, 1000000], botN: [1, 10000000] };
     var MONTH = 30.5, opt = {}, last = null, rowEls = {}, seps = {};
     function n(v) { return Math.round(v).toLocaleString("en-US"); }
     function pl(v, w) { return n(v) + " " + w + (v === 1 ? "" : "s"); }
@@ -1916,22 +1914,19 @@ window.ldMemo = {
       signups: ["Sign-ups", function () { return pl(opt.signN, "anonymous visitor") + " sign up this month. Their anonymous key already counted, and their new user key counts too, so each sign-up adds one more."; }, "No sign-ups this month."],
       bots: ["Bots and test browsers", function () { return "Crawlers, headless test browsers and private windows get a new key on every visit: " + pl(opt.botN, "key") + ". This is the most common reason MAU runs higher than your analytics. Don’t start the SDK for traffic you never target, and keep test browsers out of production."; }, "No bot traffic."],
       project: ["Second project", "The same users also use a second LaunchDarkly project. Still counted once: the same key in several projects or environments is one MAU.", "One project."],
-      backend: ["Backend evaluations", "Your backend evaluates flags for 2 million users with a server-side SDK. The client-side count doesn’t move: server-side SDKs bill as service connections instead, on the next tab.", "No server-side evaluation shown."],
-      envs: ["Staging and dev", function () { return pl(opt.testN, "test user") + " sign in to staging and dev with their own keys, so they count. A real user’s key that also shows up in staging still counts once."; }, "Production only."],
       watch: ["Watch a month", "Watching a month go by, a day at a time. A key adds to the count the first time it shows up. After that, visits keep piling up but the count doesn’t move, so most of the month’s count arrives early. Bots keep adding new keys every day."]
     };
-    say.mobileN = [say.mobile[0], say.mobile[1]]; say.anonN = say.anon; say.signN = say.signups; say.botN = say.bots; say.testN = say.envs;
+    say.mobileN = [say.mobile[0], say.mobile[1]]; say.anonN = say.anon; say.signN = say.signups; say.botN = say.bots;
     var lit = { users: ["app"], mobile: ["mob"], mobileN: ["mob"], mobileKey: ["mob"], contexts: ["ctx"], anon: ["anon"], anonN: ["anon"], signups: ["sign"], signN: ["sign"],
-                bots: ["bots"], botN: ["bots"], project: ["proj"], backend: ["srv"], envs: ["test"], testN: ["test"] };
+                bots: ["bots"], botN: ["bots"], project: ["proj"] };
     var meterRow = { users: "c-r-key", mobile: "c-r-dev", mobileN: "c-r-dev", mobileKey: "c-r-dev", contexts: "c-r-kind", anon: "c-r-anon", anonN: "c-r-anon",
-                     signups: "c-r-anon", signN: "c-r-anon", bots: "c-r-anon", botN: "c-r-anon", project: "c-r-key", backend: "c-r-server", envs: "c-r-key", testN: "c-r-key", watch: "c-r-repeat" };
+                     signups: "c-r-anon", signN: "c-r-anon", bots: "c-r-anon", botN: "c-r-anon", project: "c-r-key", watch: "c-r-repeat" };
 
     // unique keys arrive fast at first and then level off; bots and sign-ups arrive steadily
     function early(t, d) { return (1 - Math.exp(-t / d)) / (1 - Math.exp(-MONTH / d)); }
     function rows() {
       var dk = opt.mobile && opt.mobileKey;
       return [
-        { id: "sep-p", on: opt.envs, sep: true, label: "Production" },
         { id: "app", on: true, name: ["Signed-in users on your web app · ", "users", ""], chips: ["web", "user key"], v: opt.users, keys: opt.users,
           when: "about 12 visits each · " + n(opt.users * 12) + " visits", label: n(opt.users) + " keys × 1", share: function (t) { return early(t, 5); }, visits: opt.users * 12 },
         { id: "mob", on: opt.mobile, name: ["Same people on your mobile app · ", "mobileN", ""], chips: dk ? ["iOS and Android", "device ID as key"] : ["iOS and Android", "same user key"],
@@ -1946,12 +1941,7 @@ window.ldMemo = {
         { id: "bots", on: opt.bots, name: ["Bots, test browsers, private windows · ", "botN", ""], chips: ["new key every visit"], v: opt.botN, keys: opt.botN, bot: true, warn: true,
           when: "one visit each, a fresh key every time", label: n(opt.botN) + " keys × 1", share: function (t) { return t / MONTH; }, visits: opt.botN },
         { id: "proj", on: opt.project, name: "Same users in a second project", chips: ["another LaunchDarkly project"], v: 0, keys: opt.users, dup: true,
-          when: "the same user keys", label: "same keys: +0", share: function (t) { return early(t, 5); }, visits: 0 },
-        { id: "srv", on: opt.backend, name: "Your backend · 2M users", chips: ["server-side SDK"], v: 0, keys: 2000000, dup: true,
-          when: "evaluated by a server-side SDK", label: "service connections: +0", share: function () { return 1; }, visits: 0 },
-        { id: "sep-np", on: opt.envs, sep: true, label: "Not production", note: "counts the same as production" },
-        { id: "test", on: opt.envs, name: ["Test users in staging and dev · ", "testN", ""], chips: ["staging", "development"], v: opt.testN, keys: opt.testN,
-          when: "their own test keys", label: n(opt.testN) + " keys × 1", share: function (t) { return early(t, 3); }, visits: opt.testN * 20 }
+          when: "the same user keys", label: "same keys: +0", share: function (t) { return early(t, 5); }, visits: 0 }
       ];
     }
 
