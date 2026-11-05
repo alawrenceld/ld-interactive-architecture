@@ -1250,6 +1250,7 @@
     <button class="bopt" role="switch" aria-checked="false" data-copt="anon"><span class="tog" aria-hidden="true"></span>Anonymous visitors</button>
     <button class="bopt" role="switch" aria-checked="false" data-copt="signups"><span class="tog" aria-hidden="true"></span>Sign-ups</button>
     <button class="bopt" role="switch" aria-checked="false" data-copt="bots"><span class="tog" aria-hidden="true"></span>Bots and test browsers</button>
+    <button class="bopt" role="switch" aria-checked="false" data-copt="botFilter"><span class="tog" aria-hidden="true"></span>Bot filtering (proposed)</button>
     <button class="bopt" role="switch" aria-checked="false" data-copt="project"><span class="tog" aria-hidden="true"></span>Second project</button>
   </div>
 
@@ -1893,7 +1894,7 @@ window.ldMemo = {
   // Same pattern as the server-side tab: switches up top, one row per part of your audience,
   // a person per context key, and a month you can watch fill up. Everything here is its own scope.
   (function () {
-    var DEF = { mobile: false, mobileKey: false, contexts: false, anon: false, signups: false, bots: false, project: false,
+    var DEF = { mobile: false, mobileKey: false, contexts: false, anon: false, signups: false, bots: false, botFilter: false, project: false,
                 users: 10000, mobileN: 6000, anonN: 50000, signN: 2000, botN: 200000 };
     var NUM = { users: [1, 1000000], mobileN: [1, 1000000], anonN: [1, 5000000], signN: [1, 1000000], botN: [1, 10000000] };
     var MONTH = 30.5, opt = {}, last = null, rowEls = {}, seps = {};
@@ -1913,19 +1914,26 @@ window.ldMemo = {
       anon: ["Anonymous visitors", function () { return pl(opt.anonN, "visitor") + " browse without signing in. They count: the SDK makes up a key for each one and saves it on the device, so a returning visitor counts once."; }, "No anonymous traffic."],
       signups: ["Sign-ups", function () { return pl(opt.signN, "anonymous visitor") + " sign up this month. Their anonymous key already counted, and their new user key counts too, so each sign-up adds one more."; }, "No sign-ups this month."],
       bots: ["Bots and test browsers", function () { return "Crawlers, headless test browsers and private windows get a new key on every visit: " + pl(opt.botN, "key") + ". This is the most common reason MAU runs higher than your analytics. Don’t start the SDK for traffic you never target, and keep test browsers out of production."; }, "No bot traffic."],
+      botFilter: ["Bot filtering (proposed)", function () {
+        if (!opt.bots) return "Proposed: LaunchDarkly would leave known bots out of the count. Switch on bot traffic to see what it removes.";
+        var f = Math.round(opt.botN * BOT_CAUGHT);
+        return "Proposed, not available today: LaunchDarkly leaves known crawlers and headless browsers out of the count, and still serves them flags. Of " + n(opt.botN) + " bot keys, " + n(f) + " are filtered out. The " + n(opt.botN - f) + " that pose as real browsers still count, so keep test traffic out of production too.";
+      }, function () { return opt.bots ? "No bot filtering: every bot key counts." : "No bot filtering."; }],
       project: ["Second project", "The same users also use a second LaunchDarkly project. Still counted once: the same key in several projects or environments is one MAU.", "One project."],
       watch: ["Watch a month", "Watching a month go by, a day at a time. A key adds to the count the first time it shows up. After that, visits keep piling up but the count doesn’t move, so most of the month’s count arrives early. Bots keep adding new keys every day."]
     };
     say.mobileN = [say.mobile[0], say.mobile[1]]; say.anonN = say.anon; say.signN = say.signups; say.botN = say.bots;
     var lit = { users: ["app"], mobile: ["mob"], mobileN: ["mob"], mobileKey: ["mob"], contexts: ["ctx"], anon: ["anon"], anonN: ["anon"], signups: ["sign"], signN: ["sign"],
-                bots: ["bots"], botN: ["bots"], project: ["proj"] };
+                bots: ["bots"], botN: ["bots"], botFilter: ["bots"], project: ["proj"] };
     var meterRow = { users: "c-r-key", mobile: "c-r-dev", mobileN: "c-r-dev", mobileKey: "c-r-dev", contexts: "c-r-kind", anon: "c-r-anon", anonN: "c-r-anon",
-                     signups: "c-r-anon", signN: "c-r-anon", bots: "c-r-anon", botN: "c-r-anon", project: "c-r-key", watch: "c-r-repeat" };
+                     signups: "c-r-anon", signN: "c-r-anon", bots: "c-r-anon", botN: "c-r-anon", botFilter: "c-r-anon", project: "c-r-key", watch: "c-r-repeat" };
 
     // unique keys arrive fast at first and then level off; bots and sign-ups arrive steadily
+    // with the proposed filtering, the share of bot keys caught by known-bot and headless-browser lists
+    var BOT_CAUGHT = .9;
     function early(t, d) { return (1 - Math.exp(-t / d)) / (1 - Math.exp(-MONTH / d)); }
     function rows() {
-      var dk = opt.mobile && opt.mobileKey;
+      var dk = opt.mobile && opt.mobileKey, bf = opt.botFilter, caught = Math.round(opt.botN * BOT_CAUGHT), botV = bf ? opt.botN - caught : opt.botN;
       return [
         { id: "app", on: true, name: ["Signed-in users on your web app · ", "users", ""], chips: ["web", "user key"], v: opt.users, keys: opt.users,
           when: "about 12 visits each · " + n(opt.users * 12) + " visits", label: n(opt.users) + " keys × 1", share: function (t) { return early(t, 5); }, visits: opt.users * 12 },
@@ -1938,8 +1946,10 @@ window.ldMemo = {
           when: "about 2 visits each, same saved key", label: n(opt.anonN) + " keys × 1", share: function (t) { return early(t, 9); }, visits: opt.anonN * 2 },
         { id: "sign", on: opt.signups, name: ["Visitors who sign up · ", "signN", ""], chips: ["anonymous key + user key"], v: opt.signN, keys: opt.signN,
           when: "their anonymous key already counted", label: "+1 user key each", share: function (t) { return t / MONTH; }, visits: 0 },
-        { id: "bots", on: opt.bots, name: ["Bots, test browsers, private windows · ", "botN", ""], chips: ["new key every visit"], v: opt.botN, keys: opt.botN, bot: true, warn: true,
-          when: "one visit each, a fresh key every time", label: n(opt.botN) + " keys × 1", share: function (t) { return t / MONTH; }, visits: opt.botN },
+        { id: "bots", on: opt.bots, name: ["Bots, test browsers, private windows · ", "botN", ""], chips: bf ? ["new key every visit", "bot filtering"] : ["new key every visit"],
+          v: botV, keys: opt.botN, bot: true, warn: true, filtered: bf ? BOT_CAUGHT : 0,
+          when: bf ? "known bots and headless browsers aren’t counted" : "one visit each, a fresh key every time",
+          label: bf ? n(caught) + " filtered · " + n(botV) + " count" : n(opt.botN) + " keys × 1", share: function (t) { return t / MONTH; }, visits: opt.botN },
         { id: "proj", on: opt.project, name: "Same users in a second project", chips: ["another LaunchDarkly project"], v: 0, keys: opt.users, dup: true,
           when: "the same user keys", label: "same keys: +0", share: function (t) { return early(t, 5); }, visits: 0 }
       ];
@@ -1979,7 +1989,9 @@ window.ldMemo = {
     function people(box, r) {
       var shown = Math.min(r.keys, 24), cls = "person" + (r.bot ? " bot" : "") + (r.dup ? " dup" : "");
       box.textContent = "";
-      for (var j = 0; j < shown; j++) box.appendChild(el("i", cls));
+      // filtered keys draw as outlines after the ones that still count
+      var solid = r.filtered ? Math.round(shown * (1 - r.filtered)) : shown;
+      for (var j = 0; j < shown; j++) box.appendChild(el("i", cls + (j >= solid ? " dup" : "")));
       if (r.keys > shown) box.appendChild(el("span", "more", "+" + n(r.keys - shown) + " more"));
     }
 

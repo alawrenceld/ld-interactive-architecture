@@ -40,7 +40,8 @@ built from the top Gong, Zendesk and Slack questions in Enterpret.
 - "Client-side billing" (`#client-mau`) uses the same switch pattern on one
   example audience (10,000 signed-in web users): mobile app, device ID as the
   key, multi-contexts, anonymous visitors, sign-ups, bots and test browsers,
-  and a second project.
+  a proposed bot filter (not a shipped feature; it drops 90% of bot keys), and
+  a second project.
   Counts are editable in the row titles; each row draws a figure per context
   key, outlined when the key already counted elsewhere, and its bar shows its
   share of the month's MAU. "Watch a month" shows unique keys arriving early
