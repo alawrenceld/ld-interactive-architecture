@@ -1439,7 +1439,7 @@
     <details><summary>What exactly is one service connection?</summary>
       <p>One instance of one server-side SDK, connected to one LaunchDarkly environment, for one full month. Shorter periods count as a fraction: two instances connected for half the month each add up to one.</p></details>
     <details><summary>Is it per pod, per worker, per region or per SDK key?</summary>
-      <p>Per running SDK instance, per environment. Every pod, replica, container or worker process that starts its own SDK counts, in every region. An SDK key isn’t a unit: ten pods using one key are ten connections. One instance connected to two environments counts twice.</p></details>
+      <p>Per running SDK instance, per environment. Every pod, replica or container that starts its own SDK counts, in every region. Worker processes forked from one SDK share its instance ID and count once; workers that each start their own SDK each count. An SDK key isn’t a unit: ten pods using one key are ten connections. One instance connected to two environments counts twice.</p></details>
     <details><summary>Are we billed on our peak number of pods?</summary>
       <p>No. You’re billed on total connected time across the month. Autoscaling up to 100 pods for an afternoon adds only that afternoon, not 100 connections.</p></details>
     <details><summary>Does the Relay Proxy reduce our bill?</summary>
@@ -2113,6 +2113,10 @@ window.ldMemo = {
   // - SDKs that send an instance ID: every signal from one instance is merged into one span of
   //   running time, so an always-on SDK counts the same streaming or polling, at any interval.
   // - PHP: a new process per request, so each poll counts as 30 seconds.
+  // TO CHECK with Poppy: the usage-calculation review matrix (2026-11) says polling is
+  // "calculated but not billed" today. It also shows V3's 30-second windows making the interval
+  // matter (2-min polls: 12.5 of 50 min), and V2 counting a single short poll as 0 min. The
+  // "same as streaming" and 30-seconds-per-PHP-poll claims hold only under some of those rules.
   var INTERVALS = { 15: { l: "15s" }, 30: { l: "30s" }, 60: { l: "1 min" }, 300: { l: "5 min" }, 3600: { l: "1 hour" } };
   function iv() { return INTERVALS[opt.interval]; }
   var DEFAULTS = { k8s: false, workers: false, burst: false, daily: false, envs: false, relay: false, php: false, fn: false, poll: false, interval: 30, n: 4, burstN: 10, dailyN: 10, fnM: 60 };
@@ -2130,7 +2134,7 @@ window.ldMemo = {
     burstN: ["Autoscaling", function () { return say.burst[1](); }, ""],
     dailyN: ["Daily scaling", function () { return say.daily[1](); }, ""],
     fnM: ["Lambda function", function () { return say.fn[1](); }, ""],
-    workers: ["Worker processes", "Each instance runs 4 worker processes. Python, Ruby and similar SDKs start one SDK per process, so every instance now counts four times over.",
+    workers: ["Worker processes", "Each instance runs 4 worker processes, forked from one SDK that starts before the fork. The workers share that SDK’s instance ID, so each instance still counts once. If each worker started its own SDK instead, each one would count.",
               "One process per instance again, so one SDK per instance."],
     daily: ["Daily scaling", function () { var k = opt.dailyN; return "Every morning you scale up " + plural(k, "extra " + unitWord()) + ", and every night you scale " + (k === 1 ? "it" : "them") + " back down. They run 12 hours a day, half the month, so they count as " + k + " × ½ = " + f1(k / 2) + " service connections, not " + k + ". You pay for the hours they run, not your daily peak."; },
             "No daily scaling."],
@@ -2167,9 +2171,12 @@ window.ldMemo = {
   // Each row draws what's actually running: a box per server or pod, a dot per SDK in it.
   // Switching a use case off folds its row away.
   function rowsFor() {
+    // w only draws the worker dots: forked workers share the parent SDK's instance ID, so metering
+    // (V2 spans and V3 unions per SDK ID) counts each unit once. Per the usage-calculation review
+    // matrix (Streaming/Polling/Relay 04, 2026-11) and the 2026-10-21 pre-fork/postfork decision.
     var n = opt.n, unit = unitWord(), w = opt.workers ? 4 : 1, x = 1, b = opt.burstN, d = opt.dailyN, fh = fnHours();
-    var per = opt.workers ? " · " + w + " workers per " + unit : "";
-    var app = { id: "app", on: true, name: ["Checkout service · ", "n", " " + unit + (n === 1 ? "" : "s")], env: "production", sdks: n * w, frac: 1, x: x, chips: [], when: "connected all month" + per, fleet: [unit, n, w] };
+    var per = opt.workers ? " · " + w + " workers share one SDK" : "";
+    var app = { id: "app", on: true, name: ["Checkout service · ", "n", " " + unit + (n === 1 ? "" : "s")], env: "production", sdks: n, frac: 1, x: x, chips: [], when: "connected all month" + per, fleet: [unit, n, w] };
     // the PHP switch rewrites the checkout service itself in PHP, rather than adding a second app
     // 1M requests × 1 poll × 30s = 30M seconds ≈ 8,333 hours ÷ 730 hours ≈ 11.4
     if (opt.php) app = { id: "app", on: true, name: "Checkout service · PHP · 1M requests", env: "production", sdks: 1, frac: (1e6 * 30 / 3600) / 730, x: 1,
@@ -2178,9 +2185,9 @@ window.ldMemo = {
       // the production label only shows once there's non-production to tell it apart from
       { id: "sep-p", on: opt.envs, sep: true, label: "Production" },
       app,
-      { id: "burst", on: opt.burst, name: ["", "burstN", " extra " + unit + (b === 1 ? "" : "s") + " for 3 days"], env: "production", sdks: b * w, frac: 3 / MONTH_DAYS, x: x, chips: [], when: "3 days" + per, span: "3 days", sale: [12, 15], fleet: [unit, b, w] },
+      { id: "burst", on: opt.burst, name: ["", "burstN", " extra " + unit + (b === 1 ? "" : "s") + " for 3 days"], env: "production", sdks: b, frac: 3 / MONTH_DAYS, x: x, chips: [], when: "3 days" + per, span: "3 days", sale: [12, 15], fleet: [unit, b, w] },
       // up 8am to 8pm every day: 12 of 24 hours, so half the month
-      { id: "daily", on: opt.daily, name: ["", "dailyN", " extra " + unit + (d === 1 ? "" : "s") + ", 8am to 8pm"], env: "production", sdks: d * w, frac: .5, x: x, chips: [],
+      { id: "daily", on: opt.daily, name: ["", "dailyN", " extra " + unit + (d === 1 ? "" : "s") + ", 8am to 8pm"], env: "production", sdks: d, frac: .5, x: x, chips: [],
         when: "up every morning, down every night" + per, span: "12h a day", daily: true, fleet: [unit, d, w] },
       // invocations × 220ms = running hours; one service connection is 43,800 minutes = 730 hours (60M → 3,667 h → 5.0)
       { id: "fn", on: opt.fn, name: ["Lambda function · ", "fnM", "M invocations"], env: "production", sdks: 1, frac: fh / 730, x: 1,
@@ -2188,8 +2195,8 @@ window.ldMemo = {
         when: "× 220ms each = " + hrs(fh) + " hours running", label: hrs(fh) + " h ÷ 730 h", fleet: ["fn", 12, 0, "short-lived invocations"] },
       // non-production always sits last, under its own divider
       { id: "sep-np", on: opt.envs, sep: true, label: "Not production", note: "counts the same as production" },
-      { id: "stg", on: opt.envs, name: "Checkout service · 1 " + unit, env: "staging", sdks: w, frac: 1, x: x, chips: [], when: "connected all month" + per, fleet: [unit, 1, w] },
-      { id: "dev", on: opt.envs, name: "Checkout service · 1 " + unit, env: "development", sdks: w, frac: 1, x: x, chips: [], when: "connected all month" + per, fleet: [unit, 1, w] }
+      { id: "stg", on: opt.envs, name: "Checkout service · 1 " + unit, env: "staging", sdks: 1, frac: 1, x: x, chips: [], when: "connected all month" + per, fleet: [unit, 1, w] },
+      { id: "dev", on: opt.envs, name: "Checkout service · 1 " + unit, env: "development", sdks: 1, frac: 1, x: x, chips: [], when: "connected all month" + per, fleet: [unit, 1, w] }
     ];
   }
   function rowVal(r) { return r.on && !r.sep ? r.sdks * r.frac * r.x : 0; }
