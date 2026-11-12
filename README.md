@@ -49,7 +49,7 @@ built from the top Gong, Zendesk and Slack questions in Enterpret.
 - "Server-side billing" (`#service-connections`) is a set of independent
   switches on one example service (four servers, streaming, production):
   streaming vs. polling, Kubernetes (10 pods), worker processes (4 per
-  instance), autoscaling (10 extra for 3 days), daily scaling (10 extra, 8am to 8pm), staging and dev, Relay Proxy,
+  instance, forked from one SDK, so each instance still counts once), autoscaling (10 extra for 3 days), daily scaling (10 extra, 8am to 8pm), staging and dev, Relay Proxy,
   PHP (rewrites the checkout service in PHP, which polls on every request) and a Lambda function. The meter and each row
   recompute from the switches; the narration explains the last one flipped.
   The server count, both scaling counts and the Lambda's millions of
