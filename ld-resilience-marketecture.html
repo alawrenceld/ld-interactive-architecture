@@ -1372,7 +1372,7 @@
           <article class="card sc-relay" id="sc-relay">
             <span class="badge">not billed</span>
             <div class="chead"><h3>Relay Proxy</h3></div>
-            <p class="role" id="sc-relayrole">Your SDKs connect here. It holds one connection to LaunchDarkly.</p>
+            <p class="role" id="sc-relayrole">Your SDKs connect here, and every one still counts. Its own connection to LaunchDarkly isn’t billed.</p>
             <div class="status"><i class="dot"></i><span>own connection: 0.0</span></div>
           </article>
           <!-- staging and dev each get their own Relay Proxy -->
@@ -1417,6 +1417,7 @@
         <div id="sc-r-time"><dt>measured as</dt><dd>connected time</dd></div>
         <div id="sc-r-env"><dt>dev and staging</dt><dd>counted</dd></div>
         <div id="sc-r-poll"><dt>polling, any interval</dt><dd>same as streaming</dd></div>
+        <div id="sc-r-relaysdk"><dt>SDKs behind a Relay Proxy</dt><dd>still counted</dd></div>
         <div id="sc-r-relay"><dt>Relay Proxy itself</dt><dd>not billed</dd></div>
       </dl>
     </section>
@@ -2152,13 +2153,13 @@ window.ldMemo = {
            "Your SDKs hold one streaming connection each, and each one connected all month is one service connection. Changes arrive the moment they’re made."],
     interval: ["Polling interval", function () {
       if (opt.poll) return pollStory();
-      return "Your SDKs are streaming, so the polling interval doesn’t apply. Switch to polling to see what it changes.";
+      return "Your SDKs are streaming, so the polling interval doesn’t apply. Switch to polling and the count still won’t move: the interval changes how fast flag changes arrive, not what you’re billed.";
     }, ""],
     watch: ["Watch a month", "Watching a month go by, a day at a time. Every running SDK adds its connected time as it runs: always-on servers fill the count steadily, the sale adds its share only while it runs, and daily scaling climbs by day and pauses at night. The bar under the count fills to the month’s total.",
             "Back to the month’s totals."]
   };
   function pollStory() {
-    var i = iv(), t = "Your SDKs poll every " + i.l + " instead of holding a stream. A running SDK counts for the time it runs, whether it streams or polls, so the interval doesn’t change the count.";
+    var i = iv(), t = "Your SDKs poll every " + i.l + " instead of holding a stream. The count stays the same, and that’s expected: LaunchDarkly counts how long each SDK runs, not how often it asks for flags. Polling every 15 seconds or once an hour, a running SDK counts the same.";
     if (opt.interval > 30) t += " What it changes is speed: a flag change can take up to " + i.l + " to reach your app.";
     else t += " Streaming costs the same and delivers each change the moment it’s made.";
     return t;
@@ -2166,7 +2167,7 @@ window.ldMemo = {
   var litRows = { n: ["app"], burstN: ["burst"], dailyN: ["daily"], fnM: ["fn"], k8s: ["app", "burst", "daily", "stg", "dev"], workers: ["app", "burst", "daily", "stg", "dev"], burst: ["burst"], daily: ["daily"], envs: ["stg", "dev"],
                   relay: ["relay"], php: ["app"], fn: ["fn"], poll: ["app", "burst", "daily", "stg", "dev"],
                   interval: ["app", "burst", "daily", "stg", "dev"] };
-  var meterRow = { n: "sc-r-unit", burstN: "sc-r-time", dailyN: "sc-r-time", fnM: "sc-r-time", k8s: "sc-r-unit", workers: "sc-r-unit", burst: "sc-r-time", daily: "sc-r-time", envs: "sc-r-env", relay: "sc-r-relay", php: "sc-r-poll", fn: "sc-r-time", poll: "sc-r-poll", interval: "sc-r-poll" };
+  var meterRow = { n: "sc-r-unit", burstN: "sc-r-time", dailyN: "sc-r-time", fnM: "sc-r-time", k8s: "sc-r-unit", workers: "sc-r-unit", burst: "sc-r-time", daily: "sc-r-time", envs: "sc-r-env", relay: "sc-r-relaysdk", php: "sc-r-poll", fn: "sc-r-time", poll: "sc-r-poll", interval: "sc-r-poll" };
 
   // Each row draws what's actually running: a box per server or pod, a dot per SDK in it.
   // Switching a use case off folds its row away.
@@ -2194,12 +2195,14 @@ window.ldMemo = {
         chips: ["serverless"],
         when: "× 220ms each = " + hrs(fh) + " hours running", label: hrs(fh) + " h ÷ 730 h", fleet: ["fn", 12, 0, "short-lived invocations"] },
       // non-production always sits last, under its own divider
-      { id: "sep-np", on: opt.envs, sep: true, label: "Not production", note: "counts the same as production" },
+      { id: "sep-np", on: opt.envs, sep: true, label: "Staging and dev", note: "billed like production" },
       { id: "stg", on: opt.envs, name: "Checkout service · 1 " + unit, env: "staging", sdks: 1, frac: 1, x: x, chips: [], when: "connected all month" + per, fleet: [unit, 1, w] },
       { id: "dev", on: opt.envs, name: "Checkout service · 1 " + unit, env: "development", sdks: 1, frac: 1, x: x, chips: [], when: "connected all month" + per, fleet: [unit, 1, w] }
     ];
   }
   function rowVal(r) { return r.on && !r.sep ? r.sdks * r.frac * r.x : 0; }
+  // the PHP checkout service polls on every request; everything else follows the streaming/polling choice
+  function rowPolls(r) { var id = r.id || r; return opt.poll || (opt.php && id === "app"); }
   function f1(v) { return (Math.round(v * 10) / 10).toFixed(1); }
   function fmt(v) { return v >= 100 ? Math.round(v).toLocaleString("en-US") : f1(v); }
 
@@ -2273,14 +2276,21 @@ window.ldMemo = {
     // the Relay Proxy keeps its place when off, dashed and dimmed, so the diagram never reflows
     $("sc-relaywrap").classList.toggle("gone", !opt.relay);
     relay.classList.toggle("lit", opt.relay && hot.indexOf("relay") > -1);
-    $("sc-relayrole").textContent = opt.relay ? "Your SDKs connect here. It holds one connection to LaunchDarkly." : "Off. Your SDKs connect straight to LaunchDarkly.";
+    $("sc-relayrole").textContent = opt.relay ? "Your SDKs connect here, and every one still counts. Its own connection to LaunchDarkly isn’t billed." :"Off. Your SDKs connect straight to LaunchDarkly.";
     $("sc-p1").classList.toggle("idle", !opt.relay);
-    // PHP always polls, so the links show polling whenever it's on
-    var polls = opt.poll || opt.php;
-    ["sc-p1", "sc-p2"].forEach(function (id) { $(id).classList.toggle("poll", polls); });
-    $("sc-tag").textContent = polls ? "polling" : "streaming";
-    $("sc-ldchip").textContent = polls ? "polling" : "streaming";
-    $("sc-ldrole").textContent = polls ? "Answers each poll with current flag state" : "Streams every flag change to each connected SDK";
+    // PHP polls but the other rows may still stream, so each link shows the mode of what it carries.
+    // The Relay Proxy's own link to LaunchDarkly follows the streaming/polling choice, not PHP.
+    var live = list.filter(function (r) { return r.on && !r.sep; });
+    var allPoll = live.every(rowPolls), anyPoll = live.some(rowPolls);
+    var ldMode = opt.relay ? (opt.poll ? "poll" : "stream") : allPoll ? "poll" : anyPoll ? "mixed" : "stream";
+    $("sc-p1").classList.toggle("poll", allPoll);
+    $("sc-p2").classList.toggle("poll", ldMode === "poll");
+    $("sc-tag").textContent = $("sc-ldchip").textContent = { poll: "polling", stream: "streaming", mixed: "streaming and polling" }[ldMode];
+    $("sc-ldrole").textContent = {
+      poll: "Answers each poll with current flag state",
+      stream: "Streams every flag change to each connected SDK",
+      mixed: "Streams flag changes to your always-on SDKs and answers each PHP poll"
+    }[ldMode];
     rowsFor().forEach(function (r) {
       if (r.sep) { sepEl(r).classList.toggle("gone", !r.on); return; }
       var fresh = !rowEls[r.id], e = rowEl(r.id), v = rowVal(r);
@@ -2411,9 +2421,9 @@ window.ldMemo = {
   // each Relay Proxy to every box it serves, and LaunchDarkly to each Relay Proxy. Production
   // boxes share one proxy; staging and dev each get their own when they're on.
   var svgNS = "http://www.w3.org/2000/svg";
-  function link(svg, xs, ys, xe, ye) {
+  function link(svg, xs, ys, xe, ye, poll) {
     var xm = (xs + xe) / 2, path = document.createElementNS(svgNS, "path"), head = document.createElementNS(svgNS, "path");
-    path.setAttribute("class", "wire" + (opt.poll || opt.php ? " poll" : ""));
+    path.setAttribute("class", "wire" + (poll ? " poll" : ""));
     path.setAttribute("d", "M" + xs + " " + ys + " C" + xm + " " + ys + " " + xm + " " + ye + " " + xe + " " + ye);
     head.setAttribute("class", "wire-head");
     head.setAttribute("d", "M" + (xe + 7) + " " + (ye - 5) + " L" + xe + " " + ye + " L" + (xe + 7) + " " + (ye + 5));
@@ -2435,6 +2445,7 @@ window.ldMemo = {
       var row = w.querySelector(".irow"), r = row.getBoundingClientRect();
       if (r.height < 4) return;
       var g = RELAY_FOR[w.getAttribute("data-id")] || "sc-relay";
+      r = { top: r.top, bottom: r.bottom, right: r.right, height: r.height, poll: rowPolls(w.getAttribute("data-id")) };
       (groups[g] = groups[g] || []).push(r);
     });
     var ld = document.querySelector("#panel-sc .sc-ld .card").getBoundingClientRect();
@@ -2444,8 +2455,8 @@ window.ldMemo = {
       var y = Math.max(0, Math.min(col.height - h, (top + bot) / 2 - col.top - h / 2));
       card.style.top = y + "px";
       var cx = col.left - flow.left, cy = col.top - flow.top + y + h / 2;
-      rows.forEach(function (r) { link(svg, cx, cy, r.right - flow.left + 2, r.top + r.height / 2 - flow.top); });
-      link(svg, ld.left - flow.left, ld.top + ld.height / 2 - flow.top, col.right - flow.left + 2, cy);
+      rows.forEach(function (r) { link(svg, cx, cy, r.right - flow.left + 2, r.top + r.height / 2 - flow.top, r.poll); });
+      link(svg, ld.left - flow.left, ld.top + ld.height / 2 - flow.top, col.right - flow.left + 2, cy, opt.poll);
     });
   }
   // keep the links attached while rows fold in and out, and on resize
