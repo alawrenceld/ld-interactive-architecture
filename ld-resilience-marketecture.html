@@ -810,6 +810,11 @@
   .fleet .server::before { content: ""; position: absolute; left: 4px; right: 4px; top: 4px; height: 4px;
     border-top: 1.5px solid var(--border-strong); border-bottom: 1.5px solid var(--border-strong); }
   .fleet .pod { width: 21px; height: 21px; border-radius: 6px; }
+  /* a Kubernetes node: a server box with its pods side by side inside it */
+  .fleet i.node { display: flex; gap: 4px; align-items: center; padding: 5px; border-radius: 5px; }
+  .fleet .kpod { display: grid; grid-template-columns: 5px; gap: 2px; place-content: center; width: 15px; height: 21px;
+    border: 1.5px solid var(--blue-soft); border-radius: 4px; background: var(--panel); }
+  .fleet .kpod.multi { grid-template-columns: repeat(2, 5px); width: 19px; height: 19px; }
   .fleet .req, .fleet .fn { width: 18px; height: 18px; border-radius: 50%; border-color: var(--blue); animation: blink 1.6s ease-in-out infinite; }
   .fleet .req { border-color: var(--warn); }
   .fleet .fn::after { content: "λ"; font: 600 11px/1 "Inter", sans-serif; color: var(--blue); position: absolute; inset: 0; display: grid; place-items: center; }
@@ -1373,16 +1378,16 @@
             <span class="badge">not billed</span>
             <div class="chead"><h3>Relay Proxy</h3></div>
             <p class="role" id="sc-relayrole">Your SDKs connect here, and every one still counts. Its own connection to LaunchDarkly isn’t billed.</p>
-            <div class="status"><i class="dot"></i><span>own connection: 0.0</span></div>
+            <div class="status"><i class="dot"></i><span>not counted</span></div>
           </article>
           <!-- staging and dev each get their own Relay Proxy -->
           <article class="card sc-relay mini gone" id="sc-relay-stg">
             <div class="chead"><h3>Relay Proxy</h3><span class="chip">staging</span></div>
-            <div class="status"><i class="dot"></i><span>own connection: 0.0</span></div>
+            <div class="status"><i class="dot"></i><span>not counted</span></div>
           </article>
           <article class="card sc-relay mini gone" id="sc-relay-dev">
             <div class="chead"><h3>Relay Proxy</h3><span class="chip">development</span></div>
-            <div class="status"><i class="dot"></i><span>own connection: 0.0</span></div>
+            <div class="status"><i class="dot"></i><span>not counted</span></div>
           </article>
           </div>
           </div>
@@ -2123,15 +2128,19 @@ window.ldMemo = {
   var DEFAULTS = { k8s: false, workers: false, burst: false, daily: false, envs: false, relay: false, php: false, fn: false, poll: false, interval: 30, n: 4, burstN: 10, dailyN: 10, fnM: 60 };
   // numbers typed into the row titles, and the range each one accepts
   var NUMS = { n: [1, 100], burstN: [1, 100], dailyN: [1, 100], fnM: [1, 1000] };
+  var PODS = 3;   // pods per server once the service moves to Kubernetes
+  function n0(v) { return Math.round(v).toLocaleString("en-US"); }
   function plural(n, word) { return n + " " + word + (n === 1 ? "" : "s"); }
   function unitWord() { return opt.k8s ? "pod" : "server"; }
   function fnHours() { return opt.fnM * 1e6 * 0.22 / 3600; }
   function hrs(h) { return Math.round(h).toLocaleString("en-US"); }
   var opt = {}, seen = {}, last = null;
   var say = {
-    k8s: ["Kubernetes", function () { return "Your service runs on Kubernetes as " + plural(opt.n, "pod") + ". Each pod starts its own SDK, so each pod is its own service connection, exactly like a server. The count follows running SDK instances, not services or SDK keys."; },
+    k8s: ["Kubernetes", function () { return "Your service moves to Kubernetes: each of your " + plural(opt.n, "server") + " now runs " + PODS + " pods, and each pod starts its own SDK. That’s " + n0(opt.n * PODS) + " service connections, not " + n0(opt.n) + ". The count follows running SDK instances, not machines, services or SDK keys."; },
           function () { return "Back to " + plural(opt.n, "server") + ", each running one SDK."; }],
-    n: ["Checkout service", function () { var u = unitWord(); return "Your checkout service runs on " + plural(opt.n, u) + ". Each " + u + " starts its own SDK and stays connected all month, so " + (opt.n === 1 ? "it counts as one service connection." : "each one counts as one service connection."); }, ""],
+    n: ["Checkout service", function () {
+      if (opt.k8s) return "Your checkout service runs on " + plural(opt.n, "server") + ", each with " + PODS + " pods. Every pod starts its own SDK, so that’s " + n0(opt.n * PODS) + " service connections.";
+      var u = unitWord(); return "Your checkout service runs on " + plural(opt.n, u) + ". Each " + u + " starts its own SDK and stays connected all month, so " + (opt.n === 1 ? "it counts as one service connection." : "each one counts as one service connection."); }, ""],
     burstN: ["Autoscaling", function () { return say.burst[1](); }, ""],
     dailyN: ["Daily scaling", function () { return say.daily[1](); }, ""],
     fnM: ["Lambda function", function () { return say.fn[1](); }, ""],
@@ -2177,7 +2186,10 @@ window.ldMemo = {
     // matrix (Streaming/Polling/Relay 04, 2026-11) and the 2026-10-21 pre-fork/postfork decision.
     var n = opt.n, unit = unitWord(), w = opt.workers ? 4 : 1, x = 1, b = opt.burstN, d = opt.dailyN, fh = fnHours();
     var per = opt.workers ? " · " + w + " workers share one SDK" : "";
-    var app = { id: "app", on: true, name: ["Checkout service · ", "n", " " + unit + (n === 1 ? "" : "s")], env: "production", sdks: n, frac: 1, x: x, chips: [], when: "connected all month" + per, fleet: [unit, n, w] };
+    var app = opt.k8s
+      ? { id: "app", on: true, name: ["Checkout service · ", "n", " server" + (n === 1 ? "" : "s") + " × " + PODS + " pods"], env: "production", sdks: n * PODS, frac: 1, x: x, chips: ["Kubernetes"],
+          when: "connected all month" + per, fleet: ["node", n, PODS, w] }
+      : { id: "app", on: true, name: ["Checkout service · ", "n", " " + unit + (n === 1 ? "" : "s")], env: "production", sdks: n, frac: 1, x: x, chips: [], when: "connected all month" + per, fleet: [unit, n, w] };
     // the PHP switch rewrites the checkout service itself in PHP, rather than adding a second app
     // 1M requests × 1 poll × 30s = 30M seconds ≈ 8,333 hours ÷ 730 hours ≈ 11.4
     if (opt.php) app = { id: "app", on: true, name: "Checkout service · PHP · 1M requests", env: "production", sdks: 1, frac: (1e6 * 30 / 3600) / 730, x: 1,
@@ -2196,8 +2208,8 @@ window.ldMemo = {
         when: "× 220ms each = " + hrs(fh) + " hours running", label: hrs(fh) + " h ÷ 730 h", fleet: ["fn", 12, 0, "short-lived invocations"] },
       // non-production always sits last, under its own divider
       { id: "sep-np", on: opt.envs, sep: true, label: "Staging and dev", note: "billed like production" },
-      { id: "stg", on: opt.envs, name: "Checkout service · 1 " + unit, env: "staging", sdks: 1, frac: 1, x: x, chips: [], when: "connected all month" + per, fleet: [unit, 1, w] },
-      { id: "dev", on: opt.envs, name: "Checkout service · 1 " + unit, env: "development", sdks: 1, frac: 1, x: x, chips: [], when: "connected all month" + per, fleet: [unit, 1, w] }
+      { id: "stg", on: opt.envs, name: "Checkout service · 1 " + unit, env: "staging", sdks: 1, frac: 1, x: x, chips: [], when: "connected all month" + per, fleet: opt.k8s ? ["node", 1, 1, w] : [unit, 1, w] },
+      { id: "dev", on: opt.envs, name: "Checkout service · 1 " + unit, env: "development", sdks: 1, frac: 1, x: x, chips: [], when: "connected all month" + per, fleet: opt.k8s ? ["node", 1, 1, w] : [unit, 1, w] }
     ];
   }
   function rowVal(r) { return r.on && !r.sep ? r.sdks * r.frac * r.x : 0; }
@@ -2242,8 +2254,27 @@ window.ldMemo = {
     $("sc-rows").appendChild(wrap);
     return (seps[r.id] = wrap);
   }
+  function setNodes(box, f, animate) {
+    var all = f[1], shown = Math.min(all, 12), pods = f[2], per = f[3], sig = "node:" + shown + ":" + pods + ":" + per + ":" + all;
+    if (box.getAttribute("data-sig") === sig) return;
+    box.setAttribute("data-sig", sig);
+    box.textContent = "";
+    for (var j = 0; j < shown; j++) {
+      var nd = el("i", "node" + (animate ? " new" : ""));
+      nd.title = "server running " + pods + " pod" + (pods === 1 ? "" : "s");
+      for (var k = 0; k < pods; k++) {
+        var pod = el("span", "kpod" + (per > 1 ? " multi" : ""));
+        for (var d = 0; d < per; d++) pod.appendChild(el("b"));
+        nd.appendChild(pod);
+      }
+      box.appendChild(nd);
+    }
+    if (all > shown) box.appendChild(el("span", "more", "+" + (all - shown) + " more"));
+  }
   // add or remove boxes to match the count, so only the new ones animate in
   function setFleet(box, f, animate) {
+    if (f[0] === "node") return setNodes(box, f, animate);
+    box.removeAttribute("data-sig");
     var kind = f[0], all = f[1], n = Math.min(all, 24), per = f[2], tip = f[3];
     Array.prototype.slice.call(box.children).forEach(function (c) { if (!c.classList.contains(kind) || c.tagName !== "I") box.removeChild(c); });
     while (box.children.length > n) box.removeChild(box.lastChild);
