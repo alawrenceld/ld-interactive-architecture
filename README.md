@@ -75,8 +75,8 @@ built from the top Gong, Zendesk and Slack questions in Enterpret.
   a reproduction of sampling or boundary effects. PHP retains 30 seconds per
   poll provisionally in the proposed view, pending a replacement calculation.
   Workers explicitly assume a shared SDK instance ID. Lifecycle details and
-  calculation limitations are in collapsed Notes for presenters, with one
-  sentence per line and paragraph spacing preserved. Model selection is a small
+  calculation limitations are in collapsed Notes for presenters, organized as
+  three short labeled rules with natural text wrapping. Model selection is a small
   heading and buttons above a divider, without a background card or redundant
   model-status comment.
   Relay is absent when off and appears in place when enabled. Usage bars use
