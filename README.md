@@ -52,13 +52,15 @@ built from the top Gong, Zendesk and Slack questions in Enterpret.
   instance, forked from one SDK, so each instance still counts once), autoscaling (10 extra for 3 days), daily scaling (10 extra, 8am to 8pm), staging and dev, Relay Proxy,
   PHP (rewrites the checkout service in PHP, which polls on every request) and a Lambda function. The meter and each row
   recompute from the switches; the narration explains the last one flipped.
-  The server count, both scaling counts, PHP request counts and Lambda's
-  millions of invocations are editable numbers in the row titles. PHP accepts
-  individual requests, from 1 to 1 billion. Explanation cards appear in action
-  order, each with the action, a short explanation and Before SC / After SC.
-  Undo/Redo restores both the setup and its cards; numeric keystrokes are grouped
-  as one edit. New edits clear Redo. History lasts for the page session, while
-  the setup persists across reloads.
+  The server count, both scaling counts, PHP request volume and Lambda's
+  millions of invocations are editable. PHP defaults to 1 M, with requests / K /
+  M / B display units that preserve the underlying count. The original
+  latest-action summary remains, with a compact Before SC / After SC line.
+  Optional setup info cards describe currently enabled options once each.
+  Disabling an option removes its card. Cards have no action history or repeated
+  SC values. Undo/Redo restores the setup and latest summary; numeric keystrokes
+  are grouped as one edit. New edits clear Redo. History lasts for the page
+  session, while the setup persists across reloads.
   The infrastructure box draws each server or pod with a dot per SDK, and
   folds away use cases that are off; staging and dev always sit last, under a
   "Staging and dev" divider. With the Relay Proxy on, a link runs to every box; staging and dev each
@@ -75,9 +77,12 @@ built from the top Gong, Zendesk and Slack questions in Enterpret.
   a reproduction of sampling or boundary effects. PHP retains 30 seconds per
   poll provisionally in the proposed view, pending a replacement calculation.
   Workers explicitly assume a shared SDK instance ID. Lifecycle details and
-  calculation limitations are in collapsed Notes for presenters. Relay keeps
-  an inactive placeholder in the same slot when off, so toggling it fades in
-  place without changing row widths, text wrapping or bar positions. All server-side examples normalize to 730 hours
+  calculation limitations are in collapsed Notes for presenters, with one
+  sentence per line and paragraph spacing preserved. Model selection is a small
+  heading and buttons above a divider, without a background card or redundant
+  model-status comment.
+  Relay is absent when off and appears in place when enabled. Usage bars use
+  the original compact row layout. All server-side examples normalize to 730 hours
   (43,800 minutes), including autoscaling, PHP and Lambda.
 
 Billing views are internal teaching examples, not bill estimates. Proposed ASI

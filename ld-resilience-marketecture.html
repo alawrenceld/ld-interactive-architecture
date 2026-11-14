@@ -968,43 +968,45 @@
   @media (max-width: 1279px) { :is(#panel-sc, #panel-cmau) .console { grid-template-columns: 1fr; } }
 
   /* Model selection stays small; technical assumptions are optional presenter notes. */
-  .sc-model { padding: 16px 18px; margin-bottom: 20px; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); }
+  .sc-model { padding: 0 0 18px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
+  #sc-poll-note { white-space: pre-line; }
   .sc-model h2 { margin: 0 0 10px; font-size: 15px; }
   .sc-model > p { margin: 10px 0 0; color: var(--muted); font-size: 13px; }
-  .sc-presenter-notes { margin-top: 12px; font-size: 12px; color: var(--muted); }
+  .sc-presenter-notes { margin-top: 12px; font-size: 12px; color: var(--muted); overflow-x: auto; }
   .sc-presenter-notes summary { cursor: pointer; }
-  .sc-presenter-notes p { max-width: 800px; margin: 10px 0; }
+  .sc-presenter-notes p { max-width: none; margin: 10px 0; white-space: pre; }
   #panel-sc .controls { display: flex; flex-direction: row; flex-wrap: wrap; gap: 8px; }
   #panel-sc .controls button { width: auto; }
   #panel-sc button:disabled { opacity: .4; cursor: default; }
   .sc-explanations { margin-top: 24px; }
   .sc-explanations-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
   .sc-explanations h2 { margin: 0; font-size: 20px; }
-  #sc-explanation-cards { display: grid; gap: 12px; margin-top: 16px; }
-  .sc-explanation { padding: 20px; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; }
-  .sc-explanation h3 { margin: 0 0 10px; font-size: 15px; }
-  .sc-explanation p { margin: 0; max-width: 850px; font-size: 14px; color: var(--muted); }
-  .sc-before-after { display: flex; gap: 32px; margin: 16px 0 0; }
-  .sc-before-after dt, .sc-before-after small { color: var(--muted); font-size: 12px; }
-  .sc-before-after dd { margin: 4px 0 0; font: 600 24px/1.3 "JetBrains Mono", monospace; }
-  #panel-sc .tnum.request-count { width: 8.5em; }
-  /* Reserve the Relay column on desktop. Only opacity changes, so row widths,
-     text wrapping and bars stay fixed when the Relay is toggled. */
-  #panel-sc .sc-relaywrap { flex: 0 0 280px; max-width: none; overflow: visible; transition: opacity .18s ease, visibility 0s; opacity: 1; visibility: visible; }
-  #panel-sc .sc-relaywrap.gone { max-width: none; opacity: .4; visibility: visible; pointer-events: none; }
-  #panel-sc .sc-relaywrap.gone .card { border-style: dashed; box-shadow: none; }
+  #sc-explanation-cards { display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 12px; margin-top: 14px; }
+  .sc-explanation { display: flex; flex-direction: column; gap: 10px; padding: 16px; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; }
+  .sc-explanation h3 { margin: 0; font-size: 14px; line-height: 1.4; }
+  .sc-explanation p { margin: 0; font-size: 13px; line-height: 1.55; color: var(--muted); }
+  #panel-sc .tnum.request-count { width: 3.8em; }
+  .sc-request-unit { margin: 0 3px; padding: 3px; border: 1px solid var(--border-strong); border-radius: 4px; background: var(--panel); color: var(--ink); font: 600 13px "Inter", sans-serif; }
+  /* The Relay is absent when off. Switch its layout in one step and fade only
+     its own content in place, so it never slides behind another card. */
+  #panel-sc .sc-relaywrap { flex: 0 0 280px; max-width: none; max-height: none; overflow: visible; transition: none; }
+  #panel-sc .sc-relaywrap.gone { display: none; }
+  #panel-sc .sc-relaywrap:not(.gone) .relays { animation: scRelayIn .18s ease-out; }
   #panel-sc .relays { display: flex; flex-direction: column; justify-content: center; gap: 16px; }
   #panel-sc .relays .sc-relay { position: relative; top: auto !important; flex: 0 0 auto; }
   #panel-sc .relays .sc-relay.gone { display: none; }
-  #panel-sc .irow { grid-template-columns: minmax(0, 1fr) auto; }
-  #panel-sc .irow .tcell { grid-column: 1 / -1; grid-row: 2; }
+  #panel-sc .irow { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 140px; align-items: start; }
+  #panel-sc .irow .tcell { grid-column: auto; grid-row: auto; padding-top: 4px; }
   #panel-sc .twhen { min-height: 2.8em; }
-  @media (max-width: 1279px) {
-    #panel-sc .sc-relaywrap { flex-basis: auto; max-height: none; }
-    #panel-sc .sc-relaywrap.gone { display: flex; max-height: none; }
+  @keyframes scRelayIn { from { opacity: 0; } to { opacity: 1; } }
+  @media (max-width: 1279px) { #panel-sc .sc-relaywrap { flex-basis: auto; } }
+  @media (max-width: 899px) { #panel-sc .irow { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 110px; gap: 6px 12px; } }
+  @media (max-width: 599px) {
+    #panel-sc .bseg { flex-wrap: wrap; border-radius: 12px; }
+    #panel-sc .irow { grid-template-columns: minmax(0, 1fr) auto; }
+    #panel-sc .irow .tcell { grid-column: 1 / -1; grid-row: 2; }
   }
-  @media (max-width: 599px) { #panel-sc .bseg { flex-wrap: wrap; border-radius: 12px; } }
-  @media (prefers-reduced-motion: reduce) { #panel-sc .sc-relaywrap { transition: none; } }
+  @media (prefers-reduced-motion: reduce) { #panel-sc .sc-relaywrap:not(.gone) .relays { animation: none; } }
 
   /* questions we hear most */
   .faq { margin-top: clamp(40px, 6vw, 64px); max-width: 960px; }
@@ -1385,12 +1387,17 @@
       <button role="radio" aria-checked="true" data-calculation="current">Current</button>
       <button role="radio" aria-checked="false" data-calculation="asi">Proposed ASI</button>
     </div>
-    <p id="sc-model-note"></p>
     <details class="sc-presenter-notes">
       <summary>Notes for presenters</summary>
-      <p>This is a simplified teaching example, not a complete comparison of current metering and ASI. Sampling, reconnects, short-lived processes and other scenario-matrix cases are not reproduced here.</p>
-      <p>Current polling is calculated at 30 seconds per poll but is not currently billed. Proposed ASI illustrates the goal of counting active SDK time, independent of polling frequency. PHP retains a provisional 30-second-per-poll fallback.</p>
-      <p>Workers in this example share one SDK instance ID. Separate SDK instance IDs count separately. Follow the process lifecycle supported by your SDK.</p>
+      <p>Proposed ASI is not approved.
+This is a simplified teaching example, not a complete comparison of current metering and ASI.
+Sampling, reconnects, short-lived processes and other scenario-matrix cases are not reproduced here.</p>
+      <p>Current polling is calculated at 30 seconds per poll but is not currently billed.
+Proposed ASI illustrates the goal of counting active SDK time, independent of polling frequency.
+PHP retains a provisional 30-second-per-poll fallback.</p>
+      <p>Workers in this example share one SDK instance ID.
+Separate SDK instance IDs count separately.
+Follow the process lifecycle supported by your SDK.</p>
       <p>Examples use a 730-hour month (43,800 minutes).</p>
     </details>
   </section>
@@ -1485,17 +1492,22 @@
     </section>
   </div>
 
-  <section class="sc-explanations" aria-labelledby="sc-explanations-heading">
-    <div class="sc-explanations-head">
-      <h2 id="sc-explanations-heading">What changed</h2>
-      <div class="controls">
-        <button class="btn-ghost" id="sc-undo" disabled>Undo</button>
-        <button class="btn-ghost" id="sc-redo" disabled>Redo</button>
-        <button class="btn-ghost" id="sc-reset" style="visibility:hidden">Reset everything</button>
-      </div>
+  <div class="console">
+    <div class="narration" aria-live="polite">
+      <span class="step-k" id="sc-summary-action">Your setup</span>
+      <span id="sc-summary-story"></span>
+      <span class="mday" id="sc-summary-counts"></span>
     </div>
-    <p class="mfoot" id="sc-explanations-empty">Change your setup to add an explanation here. Each card shows the action, why the count changed, and the before and after SCs.</p>
-    <div id="sc-explanation-cards" aria-live="polite" aria-relevant="additions removals"></div>
+    <div class="controls">
+      <button class="btn-ghost" id="sc-undo" disabled>Undo</button>
+      <button class="btn-ghost" id="sc-redo" disabled>Redo</button>
+      <button class="btn-ghost" id="sc-reset" style="visibility:hidden">Reset everything</button>
+    </div>
+  </div>
+
+  <section class="sc-explanations" id="sc-info-section" aria-labelledby="sc-explanations-heading" hidden>
+    <h2 id="sc-explanations-heading">Current setup</h2>
+    <div id="sc-explanation-cards"></div>
   </section>
 
   <section class="faq" aria-labelledby="sc-faq-h">
@@ -2027,10 +2039,9 @@ window.ldMemo = {
       var r = { a: a, badge: el("span", "badge"), h: el("h3"), t1: document.createTextNode(""), t2: document.createTextNode(""), num: el("input", "tnum"),
                 fleet: el("div", "fleet"), chips: el("div", "chips"), fill: el("div", "tfill"), when: el("span", "twhen"), v: document.createTextNode(""), small: el("small") };
       r.num.type = "number"; r.num.inputMode = "numeric";
-      r.num.addEventListener("focus", function () { r.num.scEditing = false; });
-    r.num.addEventListener("input", function () {
-        var k = r.num.getAttribute("data-k"), v = Number(r.num.value);
-        if (!k || !Number.isFinite(v) || r.num.value === "") return;
+      r.num.addEventListener("input", function () {
+        var k = r.num.getAttribute("data-k"), v = parseInt(r.num.value, 10);
+        if (!k || isNaN(v)) return;
         opt[k] = Math.max(NUM[k][0], Math.min(NUM[k][1], v)); last = k; cleared = false; render();
       });
       r.num.addEventListener("blur", function () { r.num.value = opt[r.num.getAttribute("data-k")]; });
@@ -2182,7 +2193,7 @@ window.ldMemo = {
   // identifiable long-lived SDKs. PHP retains the 30s fallback provisionally.
   var INTERVALS = { 15: { l: "15s" }, 30: { l: "30s" }, 60: { l: "1 min" }, 300: { l: "5 min" }, 900: { l: "15 min" }, 3600: { l: "1 hour" } };
   function iv() { return INTERVALS[opt.interval]; }
-  var DEFAULTS = { k8s: false, workers: false, burst: false, daily: false, envs: false, relay: false, php: false, fn: false, poll: false, interval: 30, n: 4, burstN: 10, dailyN: 10, fnM: 60, phpRequests: 1000000, calculation: "current" };
+  var DEFAULTS = { k8s: false, workers: false, burst: false, daily: false, envs: false, relay: false, php: false, fn: false, poll: false, interval: 30, n: 4, burstN: 10, dailyN: 10, fnM: 60, phpRequests: 1000000, phpScale: 1000000, calculation: "current" };
   // numbers typed into the row titles, and the range each one accepts
   var NUMS = { n: [1, 100], burstN: [1, 100], dailyN: [1, 100], fnM: [1, 1000], phpRequests: [1, 1000000000] };
   var PODS = 3;   // pods per server once the service moves to Kubernetes
@@ -2214,6 +2225,7 @@ window.ldMemo = {
     php: ["PHP app", function () {
       return "The production checkout service handles " + n0(opt.phpRequests) + " requests. " + phpExplanation();
     }, function () { return "The checkout service is back on " + plural(opt.n * (opt.k8s ? PODS : 1), unitWord()) + ", connected all month."; }],
+    phpScale: ["PHP request unit", function () { return phpExplanation(); }, ""],
     phpRequests: ["PHP requests", function () { return "PHP handles " + n0(opt.phpRequests) + " requests. " + phpExplanation(); }, ""],
     fn: ["Lambda function", function () { var h = fnHours(); return "A Lambda function handles " + opt.fnM + " million invocations a month, averaging 220 milliseconds each. That’s " + hrs(h) + " hours of running time. One service connection is a full month, 730 hours, so the function adds " + hrs(h) + " ÷ 730 ≈ " + f1(h / MONTH_HOURS) + ". Serverless counts running time, not invocations: halve the duration and you halve the count."; },
          "No serverless functions."],
@@ -2306,20 +2318,26 @@ window.ldMemo = {
   function rowEl(id) {
     if (rowEls[id]) return rowEls[id];
     var a = el("article", "irow"), who = el("div"), t = el("div", "tcell"), bar = el("div", "tbar"), out = el("span", "ival");
-    var r = { a: a, badge: el("span", "badge"), h: el("h3"), t1: document.createTextNode(""), t2: document.createTextNode(""), num: el("input", "tnum"), fleet: el("div", "fleet"), chips: el("div", "chips"), fill: el("div", "tfill"), when: el("span", "twhen"), v: document.createTextNode(""), small: el("small") };
+    var r = { a: a, badge: el("span", "badge"), h: el("h3"), t1: document.createTextNode(""), t2: document.createTextNode(""), num: el("input", "tnum"), unit: el("select", "sc-request-unit"), fleet: el("div", "fleet"), chips: el("div", "chips"), fill: el("div", "tfill"), when: el("span", "twhen"), v: document.createTextNode(""), small: el("small") };
     a.appendChild(r.badge);
     r.num.type = "number"; r.num.inputMode = "numeric";
     r.num.addEventListener("focus", function () { r.num.scEditing = false; });
     r.num.addEventListener("input", function () {
-      var k = r.num.getAttribute("data-k"), lim = NUMS[k], v = Number(r.num.value);
+      var k = r.num.getAttribute("data-k"), lim = NUMS[k], v = Number(r.num.value) * (k === "phpRequests" ? opt.phpScale : 1);
       if (!k || !Number.isFinite(v) || r.num.value === "") return;                       // wait for a real number while they type
       v = Math.round(v);
       var next = Math.max(lim[0], Math.min(lim[1], v));
       if (next === opt[k]) return;
       flip(k, next, r.num.scEditing); r.num.scEditing = true;
     });
-    r.num.addEventListener("blur", function () { r.num.value = opt[r.num.getAttribute("data-k")]; });
-    r.h.appendChild(r.t1); r.h.appendChild(r.num); r.h.appendChild(r.t2);
+    r.num.addEventListener("blur", function () { var k = r.num.getAttribute("data-k"); r.num.value = opt[k] / (k === "phpRequests" ? opt.phpScale : 1); });
+    r.unit.hidden = true;
+    r.unit.setAttribute("aria-label", "PHP request unit");
+    [[1, "requests"], [1000, "K"], [1000000, "M"], [1000000000, "B"]].forEach(function (entry) {
+      var option = el("option", null, entry[1]); option.value = entry[0]; r.unit.appendChild(option);
+    });
+    r.unit.addEventListener("change", function () { flip("phpScale", +this.value); });
+    r.h.appendChild(r.t1); r.h.appendChild(r.num); r.h.appendChild(r.unit); r.h.appendChild(r.t2);
     who.appendChild(r.h); who.appendChild(r.fleet); who.appendChild(r.chips); a.appendChild(who);
     bar.appendChild(r.fill); t.appendChild(bar); t.appendChild(r.when); a.appendChild(t);
     out.appendChild(r.v); out.appendChild(r.small); a.appendChild(out);
@@ -2428,13 +2446,18 @@ window.ldMemo = {
       var nm = typeof r.name === "string" ? [r.name, null, ""] : r.name;
       e.t1.nodeValue = nm[0]; e.t2.nodeValue = nm[2];
       e.num.hidden = !nm[1];
+      e.unit.hidden = nm[1] !== "phpRequests";
+      if (nm[1] === "phpRequests") e.t2.nodeValue = opt.phpScale === 1 ? "" : " requests";
       if (nm[1]) {
         e.num.setAttribute("data-k", nm[1]);
-        e.num.min = NUMS[nm[1]][0]; e.num.max = NUMS[nm[1]][1];
-        e.num.step = "1";
+        var scale = nm[1] === "phpRequests" ? opt.phpScale : 1;
+        e.num.min = NUMS[nm[1]][0] / scale; e.num.max = NUMS[nm[1]][1] / scale;
+        e.num.step = nm[1] === "phpRequests" ? "any" : "1";
+        e.num.inputMode = nm[1] === "phpRequests" ? "decimal" : "numeric";
+        e.unit.value = String(opt.phpScale);
         e.num.classList.toggle("request-count", nm[1] === "phpRequests");
-        e.num.setAttribute("aria-label", { n: "Number of " + unitWord() + "s", burstN: "Extra " + unitWord() + "s for the sale", dailyN: "Extra " + unitWord() + "s each day", fnM: "Millions of invocations", phpRequests: "PHP requests per month" }[nm[1]]);
-        if (document.activeElement !== e.num) e.num.value = opt[nm[1]];
+        e.num.setAttribute("aria-label", { n: "Number of servers", burstN: "Extra " + unitWord() + "s for the sale", dailyN: "Extra " + unitWord() + "s each day", fnM: "Millions of invocations", phpRequests: "PHP requests per month" }[nm[1]]);
+        if (document.activeElement !== e.num || last === "phpScale") e.num.value = opt[nm[1]] / scale;
       }
       e.chips.textContent = "";
       [r.env].concat(r.chips).forEach(function (c) { e.chips.appendChild(el("span", "chip", c)); });
@@ -2464,15 +2487,16 @@ window.ldMemo = {
     $("sc-reset").style.visibility = any ? "visible" : "hidden";
     ldMemo.set("server", opt);
   }
-  var undoStack = [], redoStack = [], changeText = "", explanations = [];
+  var undoStack = [], redoStack = [], changeText = "", lastSummary = null;
   function stateCopy() { return Object.assign({}, opt); }
-  function snapshot() { return { state: stateCopy(), last: last, change: changeText, explanations: explanations.slice() }; }
+  function snapshot() { return { state: stateCopy(), last: last, change: changeText, summary: lastSummary }; }
   function displayed() { var t = totals(); return opt.calculation === "current" ? t.billed : t.proposed; }
   function signed(n) { return (n > 0 ? "+" : "") + fmt(n); }
   function setting(k, value) {
     if (k === "calculation") return value === "current" ? "Current" : "Proposed ASI";
     if (k === "poll") return value ? "Polling" : "Streaming";
     if (k === "interval") return INTERVALS[value].l;
+    if (k === "phpScale") return { 1: "requests", 1000: "K", 1000000: "M", 1000000000: "B" }[value];
     if (NUMS[k]) return n0(value);
     return value ? "on" : "off";
   }
@@ -2483,66 +2507,78 @@ window.ldMemo = {
       var current = opt; opt = undoStack[undoStack.length - 1].state;
       before = displayed(); prev = opt[k]; opt = current;
     } else undoStack.push(snapshot());
-    if (coalesce && undoStack.length) explanations = undoStack[undoStack.length - 1].explanations.slice();
     redoStack = [];
     setWatch(false); opt[k] = v; last = k; cleared = false;
     var name = k === "calculation" ? "Calculation model" : k === "interval" ? "Polling interval" : k === "poll" ? "Connection" : say[k][0];
     changeText = name + ": " + setting(k, prev) + " → " + setting(k, v) + ". " +
       fromModel + " " + fmt(before) + " → " + setting("calculation", opt.calculation) + " " + fmt(displayed()) +
       "; Δ " + signed(displayed() - before) + " SC equivalent.";
-    var line = k === "calculation" ? modelExplanation() : say[k][k === "interval" || NUMS[k] || opt[k] ? 1 : 2];
-    var explanation = typeof line === "function" ? line() : line;
-    if (opt.php && (k === "n" || k === "k8s")) {
-      explanation = "The PHP checkout service still uses the request count in this example. Infrastructure changes do not change that request count; other always-on workloads follow the setup you selected.";
-    } else if (opt.calculation === "current" && opt.poll) {
-      var running = opt.n * (opt.k8s ? PODS : 1);
-      if (k === "n" || k === "k8s") explanation = "The checkout service now runs " + running + " SDKs. These SDKs are polling, which is not currently billed.";
-      if (k === "burst" || k === "burstN") explanation = opt.burst ? "The sale adds " + opt.burstN + " extra SDKs for three days. These SDKs are polling, which is not currently billed." : "No burst this month.";
-      if (k === "daily" || k === "dailyN") explanation = opt.daily ? "Daily scaling adds " + opt.dailyN + " extra SDKs from 8am to 8pm. These SDKs are polling, which is not currently billed." : "No daily scaling.";
-      if (k === "envs") explanation = opt.envs ? "Staging and dev each add one SDK running all month. These SDKs are polling, which is not currently billed." : "Production only.";
-    }
-    explanations.push({ topic: name, action: setting(k, prev) + " → " + setting(k, v), explanation: explanation,
-      before: before, after: displayed(), beforeModel: fromModel, afterModel: setting("calculation", opt.calculation) });
+    lastSummary = { action: name + " · " + setting(k, prev) + " → " + setting(k, v),
+      explanation: actionExplanation(k), before: before, after: displayed(),
+      beforeModel: fromModel, afterModel: setting("calculation", opt.calculation) };
     renderSC(); drawWires();
   }
   function restore(from, to) {
     if (!from.length) return;
     to.push(snapshot()); var saved = from.pop();
-    setWatch(false); cleared = false; opt = saved.state; last = saved.last; changeText = saved.change; explanations = saved.explanations.slice();
+    setWatch(false); cleared = false; opt = saved.state; last = saved.last; changeText = saved.change; lastSummary = saved.summary;
     renderSC(); drawWires();
   }
   function modelExplanation() {
-    return opt.calculation === "asi"
-      ? "Proposed ASI counts active SDK time in this simplified example. The same running time has the same count, whether an SDK streams or polls. PHP still uses a provisional example."
-      : "Current shows billed service connections. Polling usage is not currently billed.";
+    return opt.calculation === "asi" ? "Proposed ASI illustrates active SDK time. PHP uses a provisional example."
+      : "Current shows billed service connections. Polling is not currently billed.";
+  }
+  function actionExplanation(k) {
+    if (k === "calculation") return modelExplanation();
+    if (k === "phpScale") return "The request count stays the same. Only the display unit changed.";
+    if (opt.php && (k === "n" || k === "k8s")) return "The PHP request count stays the same. Other always-on workloads follow the selected setup.";
+    if (opt.calculation === "current" && opt.poll) {
+      if (k === "n" || k === "k8s") return "Your checkout service runs " + opt.n * (opt.k8s ? PODS : 1) + " SDKs. These SDKs are polling, which is not currently billed.";
+      if (k === "burst" || k === "burstN") return opt.burst ? "The sale adds " + opt.burstN + " SDKs for three days. They are polling, which is not currently billed." : "No burst this month.";
+      if (k === "daily" || k === "dailyN") return opt.daily ? "Daily scaling adds " + opt.dailyN + " SDKs from 8am to 8pm. They are polling, which is not currently billed." : "No daily scaling.";
+      if (k === "envs") return opt.envs ? "Staging and dev each run one SDK all month. They are polling, which is not currently billed." : "Production only.";
+    }
+    var line = say[k][k === "interval" || NUMS[k] || opt[k] ? 1 : 2];
+    return typeof line === "function" ? line() : line;
+  }
+  function activeExplanations() {
+    var cards = [], currentPolling = opt.calculation === "current" && opt.poll;
+    function add(id, title, text) { cards.push({ id: id, topic: title, explanation: text }); }
+    if (opt.php) add("php", "PHP", "One poll per request. " + (opt.calculation === "current" ? "Polling is not currently billed." : "This proposed example provisionally uses 30 seconds per poll."));
+    if (opt.k8s) add("k8s", "Kubernetes", opt.php ? "Always-on SDKs follow the pod layout. The PHP request count stays the same." : "Three pods per server, each with its own SDK.");
+    if (opt.workers) add("workers", "Worker processes", "Four workers share one SDK instance ID in this example. Separate SDK instance IDs count separately.");
+    if (opt.burst) add("burst", "Autoscaling", plural(opt.burstN, "extra " + unitWord()) + " run for three days.");
+    if (opt.daily) add("daily", "Daily scaling", plural(opt.dailyN, "extra " + unitWord()) + " run from 8am to 8pm.");
+    if (opt.envs) add("envs", "Staging and dev", "One SDK per environment, running all month.");
+    if (opt.relay) add("relay", "Relay Proxy", "The Relay Proxy’s own connection is not billed. SDKs behind it still count.");
+    if (opt.fn) add("fn", "Lambda", opt.fnM + "M invocations at 220ms each. Running time determines the count.");
+    if (opt.poll) add("poll", "Polling · " + iv().l, currentPolling ? "Polling is not currently billed." : "The same running time has the same count at any polling interval.");
+    return cards;
   }
   function renderScenario() {
     var asi = opt.calculation === "asi";
-    $("sc-model-note").textContent = asi ? "Proposed ASI · illustrative, not approved" : "Current billing";
     $("sc-count-label").textContent = asi ? "Proposed ASI example" : "Current billed SCs";
     $("sc-count-unit").textContent = asi ? "service connections · proposed" : "service connections";
-    $("sc-poll-rule").textContent = asi ? "same running time, same count*" : "not currently billed";
+    $("sc-poll-rule").textContent = asi ? "same running time, same count" : "not currently billed";
     $("sc-time-rule").textContent = asi ? "active SDK time" : "connected time";
     $("sc-poll-note").textContent = asi
-      ? "In Proposed ASI, polling frequency changes how quickly flag updates arrive; running time determines the count. *PHP uses a provisional example."
+      ? "In Proposed ASI, polling frequency changes how quickly flag updates arrive. Running time determines the count.\nNote: PHP uses a provisional example."
       : "Polling usage is not currently billed. Switch to Proposed ASI to explore the active-time example.";
     Array.prototype.forEach.call(document.querySelectorAll("#panel-sc [data-calculation]"), function (b) {
       b.setAttribute("aria-checked", b.getAttribute("data-calculation") === opt.calculation ? "true" : "false");
     });
     var box = $("sc-explanation-cards"); box.textContent = "";
-    $("sc-explanations-empty").hidden = explanations.length > 0;
-    explanations.forEach(function (item, index) {
+    var active = activeExplanations();
+    $("sc-info-section").hidden = !active.length;
+    $("sc-summary-action").textContent = watching ? "Watch a month" : lastSummary ? lastSummary.action : "Your setup";
+    $("sc-summary-story").textContent = watching ? say.watch[1] : lastSummary ? lastSummary.explanation : actionExplanation(opt.php ? "php" : "n");
+    $("sc-summary-counts").textContent = lastSummary && !watching
+      ? "Before SC " + fmt(lastSummary.before) + " → After SC " + fmt(lastSummary.after) : "";
+    active.forEach(function (item) {
       var card = el("article", "sc-explanation");
-      card.appendChild(el("h3", null, (index + 1) + ". " + item.topic + " · " + item.action));
+      card.appendChild(el("h3", null, item.topic));
       card.appendChild(el("p", null, item.explanation));
-      var counts = el("dl", "sc-before-after");
-      [["Before SC", item.before, item.beforeModel], ["After SC", item.after, item.afterModel]].forEach(function (entry) {
-        var cell = el("div"); cell.appendChild(el("dt", null, entry[0]));
-        cell.appendChild(el("dd", null, fmt(entry[1])));
-        if (item.beforeModel !== item.afterModel) cell.appendChild(el("small", null, entry[2]));
-        counts.appendChild(cell);
-      });
-      card.appendChild(counts); box.appendChild(card);
+      box.appendChild(card);
     });
     $("sc-undo").disabled = !undoStack.length;
     $("sc-redo").disabled = !redoStack.length;
@@ -2692,18 +2728,19 @@ window.ldMemo = {
     Object.keys(DEFAULTS).forEach(function (k) { opt[k] = DEFAULTS[k]; });
     setWatch(false); cleared = false;
     last = "reset"; changeText = "Reset setup: " + fmt(before) + " → " + fmt(displayed()) + "; Δ " + signed(displayed() - before) + " SC equivalent.";
-    explanations.push({ topic: "Reset setup", action: "defaults restored", explanation: "Back to four servers, streaming in production, using Current billing.",
-      before: before, after: displayed(), beforeModel: beforeModel, afterModel: "Current" });
+    lastSummary = { action: "Setup reset", explanation: "Back to four servers, streaming in production.", before: before, after: displayed() };
     renderSC(); drawWires();
   });
   Object.keys(DEFAULTS).forEach(function (k) { opt[k] = DEFAULTS[k]; });
   var saved = ldMemo.get("server");
   if (saved && saved.phpRequests === undefined && typeof saved.phpM === "number") saved.phpRequests = Math.round(saved.phpM * 1e6);
+  if (saved && saved.phpScale === undefined && typeof saved.phpRequests === "number") saved.phpScale = saved.phpRequests >= 1e6 ? 1e6 : saved.phpRequests >= 1000 ? 1000 : 1;
   if (saved && typeof saved === "object") Object.keys(DEFAULTS).forEach(function (k) {
     var v = saved[k];
     if (typeof v !== typeof DEFAULTS[k]) return;
     if (k === "interval" && !INTERVALS[v]) return;
     if (k === "calculation" && v !== "current" && v !== "asi") return;
+    if (k === "phpScale" && [1, 1000, 1000000, 1000000000].indexOf(v) === -1) return;
     if (NUMS[k] && !(v >= NUMS[k][0] && v <= NUMS[k][1])) return;
     opt[k] = v;
   });
