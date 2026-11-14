@@ -977,13 +977,6 @@
   #panel-sc .controls { display: flex; flex-direction: row; flex-wrap: wrap; gap: 8px; }
   #panel-sc .controls button { width: auto; }
   #panel-sc button:disabled { opacity: .4; cursor: default; }
-  .sc-explanations { margin-top: 24px; }
-  .sc-explanations-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
-  .sc-explanations h2 { margin: 0; font-size: 20px; }
-  #sc-explanation-cards { position: relative; display: grid; grid-template-columns: repeat(auto-fill, minmax(min(100%, 250px), 1fr)); gap: 12px; margin-top: 14px; }
-  .sc-explanation { height: var(--sc-card-height, 148px); display: flex; flex-direction: column; gap: 10px; padding: 16px; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; }
-  .sc-explanation h3 { margin: 0; font-size: 14px; line-height: 1.4; }
-  .sc-explanation p { margin: 0; font-size: 13px; line-height: 1.55; color: var(--muted); }
   #panel-sc .tnum.request-count { width: 3.8em; }
   .sc-request-unit { margin: 0 3px; padding: 3px; border: 1px solid var(--border-strong); border-radius: 4px; background: var(--panel); color: var(--ink); font: 600 13px "Inter", sans-serif; }
   /* The Relay is absent when off. Switch its layout in one step and fade only
@@ -994,16 +987,10 @@
   #panel-sc .relays { display: flex; flex-direction: column; justify-content: center; gap: 16px; }
   #panel-sc .relays .sc-relay { position: relative; top: auto !important; flex: 0 0 auto; }
   #panel-sc .relays .sc-relay.gone { display: none; }
-  #panel-sc .irow { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 140px; align-items: start; }
-  #panel-sc .irow .tcell { grid-column: auto; grid-row: auto; padding-top: 4px; }
-  #panel-sc .twhen { min-height: 2.8em; }
   @keyframes scRelayIn { from { opacity: 0; } to { opacity: 1; } }
   @media (max-width: 1279px) { #panel-sc .sc-relaywrap { flex-basis: auto; } }
-  @media (max-width: 899px) { #panel-sc .irow { grid-template-columns: minmax(0, 1.4fr) minmax(0, 1fr) 110px; gap: 6px 12px; } }
   @media (max-width: 599px) {
     #panel-sc .bseg { flex-wrap: wrap; border-radius: 12px; }
-    #panel-sc .irow { grid-template-columns: minmax(0, 1fr) auto; }
-    #panel-sc .irow .tcell { grid-column: 1 / -1; grid-row: 2; }
   }
   @media (prefers-reduced-motion: reduce) { #panel-sc .sc-relaywrap:not(.gone) .relays { animation: none; } }
 
@@ -1502,11 +1489,6 @@ Follow the process lifecycle supported by your SDK.</p>
       <button class="btn-ghost" id="sc-reset" style="visibility:hidden">Reset everything</button>
     </div>
   </div>
-
-  <section class="sc-explanations" id="sc-info-section" aria-labelledby="sc-explanations-heading" hidden>
-    <h2 id="sc-explanations-heading">Current setup</h2>
-    <div id="sc-explanation-cards"></div>
-  </section>
 
   <section class="faq" aria-labelledby="sc-faq-h">
     <h2 id="sc-faq-h">Questions we hear most</h2>
@@ -2483,11 +2465,11 @@ window.ldMemo = {
     $("sc-intsel").disabled = !opt.poll;
     var any = Object.keys(opt).some(function (k) { return opt[k] !== DEFAULTS[k]; });
     $("sc-reset").style.visibility = any ? "visible" : "hidden";
-    ldMemo.set("server", Object.assign({}, opt, { cardOrder: cardOrder.slice() }));
+    ldMemo.set("server", opt);
   }
-  var undoStack = [], redoStack = [], changeText = "", lastSummary = null, cardOrder = ["connection"];
+  var undoStack = [], redoStack = [], changeText = "", lastSummary = null;
   function stateCopy() { return Object.assign({}, opt); }
-  function snapshot() { return { state: stateCopy(), last: last, change: changeText, summary: lastSummary, cardOrder: cardOrder.slice() }; }
+  function snapshot() { return { state: stateCopy(), last: last, change: changeText, summary: lastSummary }; }
   function displayed() { var t = totals(); return opt.calculation === "current" ? t.billed : t.proposed; }
   function signed(n) { return (n > 0 ? "+" : "") + fmt(n); }
   function setting(k, value) {
@@ -2507,7 +2489,6 @@ window.ldMemo = {
     } else undoStack.push(snapshot());
     redoStack = [];
     setWatch(false); opt[k] = v; last = k; cleared = false;
-    updateCardOrder(k, v);
     var name = k === "calculation" ? "Calculation model" : k === "interval" ? "Polling interval" : k === "poll" ? "Connection" : say[k][0];
     changeText = name + ": " + setting(k, prev) + " → " + setting(k, v) + ". " +
       fromModel + " " + fmt(before) + " → " + setting("calculation", opt.calculation) + " " + fmt(displayed()) +
@@ -2520,7 +2501,7 @@ window.ldMemo = {
   function restore(from, to) {
     if (!from.length) return;
     to.push(snapshot()); var saved = from.pop();
-    setWatch(false); cleared = false; opt = saved.state; last = saved.last; changeText = saved.change; lastSummary = saved.summary; cardOrder = saved.cardOrder.slice();
+    setWatch(false); cleared = false; opt = saved.state; last = saved.last; changeText = saved.change; lastSummary = saved.summary;
     renderSC(); drawWires();
   }
   function modelExplanation() {
@@ -2540,123 +2521,6 @@ window.ldMemo = {
     var line = say[k][k === "interval" || NUMS[k] || opt[k] ? 1 : 2];
     return typeof line === "function" ? line() : line;
   }
-  var CARD_TOPICS = ["connection", "php", "k8s", "workers", "burst", "daily", "envs", "relay", "fn"];
-  function updateCardOrder(k, on) {
-    var id = k === "poll" ? "connection" : k;
-    if (CARD_TOPICS.indexOf(id) === -1) return;
-    cardOrder = cardOrder.filter(function (item) { return item !== id; });
-    if (id === "connection" || on) cardOrder.push(id);
-  }
-  function activeExplanations() {
-    var cards = [], currentPolling = opt.calculation === "current" && opt.poll;
-    function add(id, title, text) { cards.push({ id: id, topic: title, explanation: text }); }
-    if (opt.php) add("php", "PHP", "One poll per request. " + (opt.calculation === "current" ? "Polling is not currently billed." : "This proposed example provisionally uses 30 seconds per poll."));
-    if (opt.k8s) add("k8s", "Kubernetes", opt.php ? "Always-on SDKs follow the pod layout. The PHP request count stays the same." : "Three pods per server, each with its own SDK.");
-    if (opt.workers) add("workers", "Worker processes", "Four workers share one SDK instance ID in this example. Separate SDK instance IDs count separately.");
-    if (opt.burst) add("burst", "Autoscaling", plural(opt.burstN, "extra " + unitWord()) + " run for three days.");
-    if (opt.daily) add("daily", "Daily scaling", plural(opt.dailyN, "extra " + unitWord()) + " run from 8am to 8pm.");
-    if (opt.envs) add("envs", "Staging and dev", "One SDK per environment, running all month.");
-    if (opt.relay) add("relay", "Relay Proxy", "The Relay Proxy’s own connection is not billed. SDKs behind it still count.");
-    if (opt.fn) add("fn", "Lambda", opt.fnM + "M invocations at 220ms each. Running time determines the count.");
-    add("connection", opt.poll ? "Polling · " + iv().l : "Streaming", opt.poll
-      ? currentPolling ? "Polling is not currently billed." : "The same running time has the same count at any polling interval."
-      : "Flag changes arrive over a persistent connection. The count follows connected time.");
-    return cards.sort(function (a, b) {
-      var ai = cardOrder.indexOf(a.id), bi = cardOrder.indexOf(b.id);
-      return (ai < 0 ? CARD_TOPICS.length + CARD_TOPICS.indexOf(a.id) : ai) -
-        (bi < 0 ? CARD_TOPICS.length + CARD_TOPICS.indexOf(b.id) : bi);
-    });
-  }
-  var infoNodes = Object.create(null), infoIds = [], infoWidth = 0;
-  function sizeInfoCards() {
-    var box = $("sc-explanation-cards"), entries = Object.keys(infoNodes).map(function (id) { return infoNodes[id]; });
-    if (!entries.length || !entries[0].node.isConnected) return;
-    var width = entries[0].node.getBoundingClientRect().width;
-    if (!width) return;
-    infoWidth = box.clientWidth;
-    // Measure the worker explanation at this column width even when it is off.
-    var sizer = el("article", "sc-explanation");
-    sizer.setAttribute("aria-hidden", "true");
-    sizer.style.cssText = "position:absolute;visibility:hidden;pointer-events:none;height:auto;width:" + width + "px;left:0;top:0";
-    sizer.appendChild(el("h3", null, "Worker processes"));
-    sizer.appendChild(el("p", null, "Four workers share one SDK instance ID in this example. Separate SDK instance IDs count separately."));
-    box.appendChild(sizer);
-    var height = Math.max(128, sizer.getBoundingClientRect().height);
-    entries.forEach(function (entry) { entry.node.style.height = "auto"; height = Math.max(height, entry.node.getBoundingClientRect().height); });
-    sizer.remove();
-    box.style.setProperty("--sc-card-height", Math.ceil(height) + "px");
-    entries.forEach(function (entry) { entry.node.style.height = ""; });
-  }
-  function moveInfoCards(update) {
-    var before = {};
-    Object.keys(infoNodes).forEach(function (id) {
-      var entry = infoNodes[id];
-      if (entry.node.isConnected && !entry.leaving) before[id] = entry.node.getBoundingClientRect();
-    });
-    Object.keys(infoNodes).forEach(function (id) { if (infoNodes[id].move) { infoNodes[id].move.cancel(); infoNodes[id].move = null; } });
-    update(); sizeInfoCards();
-    if (reduced) return;
-    Object.keys(before).forEach(function (id) {
-      var entry = infoNodes[id];
-      if (!entry || entry.leaving || !entry.node.animate) return;
-      var after = entry.node.getBoundingClientRect(), dx = before[id].left - after.left, dy = before[id].top - after.top;
-      if (Math.abs(dx) < .5 && Math.abs(dy) < .5) return;
-      if (entry.move) entry.move.cancel();
-      entry.move = entry.node.animate([{ transform: "translate(" + dx + "px," + dy + "px)" }, { transform: "none" }],
-        { duration: 220, easing: "cubic-bezier(.2,0,0,1)" });
-    });
-  }
-  function orderInfoCards() {
-    if (Object.keys(infoNodes).some(function (id) { return infoNodes[id].leaving; })) return;
-    infoIds.forEach(function (id) { if (infoNodes[id]) $("sc-explanation-cards").appendChild(infoNodes[id].node); });
-  }
-  function renderInfoCards(active) {
-    var box = $("sc-explanation-cards");
-    infoIds = active.map(function (item) { return item.id; });
-    $("sc-info-section").hidden = false;
-    var entering = [], departing = [];
-    Object.keys(infoNodes).forEach(function (id) {
-      var entry = infoNodes[id];
-      if (infoIds.indexOf(id) !== -1 || entry.leaving) return;
-      departing.push({ id: id, entry: entry, opacity: getComputedStyle(entry.node).opacity });
-      entry.leaving = true; entry.node.inert = true; entry.node.setAttribute("aria-hidden", "true");
-    });
-    moveInfoCards(function () {
-      active.forEach(function (item) {
-        var entry = infoNodes[item.id];
-        if (!entry) {
-          entry = { node: el("article", "sc-explanation"), heading: el("h3"), body: el("p") };
-          entry.node.setAttribute("data-topic", item.id);
-          entry.node.appendChild(entry.heading); entry.node.appendChild(entry.body);
-          infoNodes[item.id] = entry; box.appendChild(entry.node);
-          entering.push({ entry: entry, opacity: 0 });
-        } else if (entry.leaving) {
-          var opacity = getComputedStyle(entry.node).opacity;
-          if (entry.fade) entry.fade.cancel();
-          entry.leaving = false; entry.node.removeAttribute("aria-hidden"); entry.node.inert = false;
-          entering.push({ entry: entry, opacity: opacity });
-        }
-        entry.heading.textContent = item.topic; entry.body.textContent = item.explanation;
-      });
-      orderInfoCards();
-    });
-    entering.forEach(function (item) {
-      if (!reduced && item.entry.node.animate) item.entry.fade = item.entry.node.animate(
-        [{ opacity: item.opacity }, { opacity: 1 }], { duration: 180, easing: "ease-out", fill: "both" });
-    });
-    departing.forEach(function (item) {
-      var id = item.id, entry = item.entry, opacity = item.opacity;
-      if (entry.fade) entry.fade.cancel();
-      function remove() {
-        if (!entry.leaving || infoNodes[id] !== entry) return;
-        moveInfoCards(function () { entry.node.remove(); delete infoNodes[id]; orderInfoCards(); });
-        $("sc-info-section").hidden = !Object.keys(infoNodes).length;
-      }
-      if (reduced || !entry.node.animate) { remove(); return; }
-      entry.fade = entry.node.animate([{ opacity: opacity }, { opacity: 0 }], { duration: 150, easing: "ease-out", fill: "both" });
-      entry.fade.finished.then(remove, function () {});
-    });
-  }
   function renderScenario() {
     var asi = opt.calculation === "asi";
     $("sc-count-label").textContent = asi ? "Proposed ASI example" : "Current billed SCs";
@@ -2675,16 +2539,9 @@ window.ldMemo = {
     });
     $("sc-summary-action").textContent = watching ? "Watch a month" : lastSummary ? lastSummary.action : "Your setup";
     $("sc-summary-story").textContent = watching ? say.watch[1] : lastSummary ? lastSummary.explanation : actionExplanation(opt.php ? "php" : "n");
-    renderInfoCards(activeExplanations());
     $("sc-undo").disabled = !undoStack.length;
     $("sc-redo").disabled = !redoStack.length;
   }
-
-  if (window.ResizeObserver) {
-    var infoObserver = new ResizeObserver(function () { if ($("sc-explanation-cards").clientWidth !== infoWidth) sizeInfoCards(); });
-    infoObserver.observe($("sc-explanation-cards"));
-  }
-  if (document.fonts) document.fonts.ready.then(sizeInfoCards);
 
   // ---- watch a month: replay the current setup day by day, filling the count as it goes
   var watching = false, cleared = false, tNow = MONTH_DAYS, t0 = 0, raf = 0, DUR = 18000;
@@ -2828,7 +2685,6 @@ window.ldMemo = {
   $("sc-reset").addEventListener("click", function () {
     var before = displayed(), beforeModel = setting("calculation", opt.calculation); undoStack.push(snapshot()); redoStack = [];
     Object.keys(DEFAULTS).forEach(function (k) { opt[k] = DEFAULTS[k]; });
-    cardOrder = ["connection"];
     setWatch(false); cleared = false;
     last = "reset"; changeText = "Reset setup: " + fmt(before) + " → " + fmt(displayed()) + "; Δ " + signed(displayed() - before) + " SC equivalent.";
     lastSummary = { action: "Setup reset", explanation: "Back to four servers, streaming in production.", before: before, after: displayed() };
@@ -2847,12 +2703,6 @@ window.ldMemo = {
     if (NUMS[k] && !(v >= NUMS[k][0] && v <= NUMS[k][1])) return;
     opt[k] = v;
   });
-  if (saved && Array.isArray(saved.cardOrder)) cardOrder = saved.cardOrder.filter(function (id, index, ids) {
-    return CARD_TOPICS.indexOf(id) !== -1 && ids.indexOf(id) === index;
-  });
-  var initialCards = activeExplanations().map(function (item) { return item.id; });
-  cardOrder = cardOrder.filter(function (id) { return initialCards.indexOf(id) !== -1; });
-  initialCards.forEach(function (id) { if (cardOrder.indexOf(id) === -1) cardOrder.push(id); });
   renderSC();
   drawWires();
 })();

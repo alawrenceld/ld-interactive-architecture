@@ -93,7 +93,6 @@ function history() {
       state: function () { return Object.assign({}, opt); },
       sizes: function () { return [undoStack.length, redoStack.length]; },
       change: function () { return changeText; },
-      cards: function () { return activeExplanations(); },
       summary: function () { return lastSummary; },
       total: displayed
     };`, context);
@@ -131,26 +130,18 @@ test('PHP request counts can be smaller than one hundred thousand', () => {
     near(model({ php: true, phpRequests }).totals().proposed, phpRequests * 30 / (730 * 3600));
   }
 });
-test('cards show current enabled topics once, and disappear when switched off', () => {
-  const h = history();
-  h.edit('workers', true); h.edit('workers', false); h.edit('workers', true);
-  assert.equal(h.cards().filter(c => c.id === 'workers').length, 1);
-  h.edit('workers', false);
-  assert.equal(h.cards().some(c => c.id === 'workers'), false);
-  h.undo(); assert.equal(h.cards().some(c => c.id === 'workers'), true);
-  h.redo(); assert.equal(h.cards().some(c => c.id === 'workers'), false);
-});
-test('the latest-action summary retains before/after while info cards reflect current options', () => {
+
+test('the latest-action summary follows the current action and restores with Undo', () => {
   const h = history(); h.edit('burst', true); h.edit('n', 8);
-  assert.equal(h.cards().length, 2); assert.equal(h.cards()[1].id, 'burst');
   near(h.summary().before, 4 + 10 * 3 * 24 / 730);
   near(h.summary().after, 8 + 10 * 3 * 24 / 730);
   h.edit('burst', false);
-  assert.equal(h.cards().length, 1); assert.match(h.summary().explanation, /No burst/);
+  assert.match(h.summary().explanation, /No burst/);
+  h.undo(); assert.match(h.summary().action, /Checkout service/);
 });
 test('numeric edits update one summary and remain one undoable action', () => {
   const h = history(); h.edit('n', 5); h.edit('n', 50, true);
-  assert.equal(h.cards().length, 1); near(h.summary().before, 4); near(h.summary().after, 50);
+  near(h.summary().before, 4); near(h.summary().after, 50);
   h.undo(); near(h.state().n, 4); assert.equal(h.summary(), null);
 });
 test('current polling summaries do not claim a billed increase', () => {
@@ -158,9 +149,9 @@ test('current polling summaries do not claim a billed increase', () => {
   near(h.summary().before, 0); near(h.summary().after, 0);
   assert.match(h.summary().explanation, /not currently billed/);
 });
-test('PHP and Kubernetes cards keep workloads distinct', () => {
+test('PHP and Kubernetes summary keeps workloads distinct', () => {
   const h = history(); h.edit('php', true); h.edit('k8s', true);
-  assert.match(h.cards().find(c => c.id === 'k8s').explanation, /PHP request count stays the same/);
+  assert.match(h.summary().explanation, /PHP request count stays the same/);
 });
 test('changing PHP display units preserves usage and supports Undo', () => {
   const h = history(); h.edit('php', true); h.edit('calculation', 'asi');
@@ -168,28 +159,4 @@ test('changing PHP display units preserves usage and supports Undo', () => {
   h.edit('phpScale', 1000);
   near(h.state().phpRequests, 1000000); near(h.total(), before);
   h.undo(); near(h.state().phpScale, 1000000);
-});
-
-test('cards follow activation order, with re-enabled options appended', () => {
-  const h = history();
-  h.edit('poll', true); h.edit('k8s', true); h.edit('workers', true);
-  assert.equal(h.cards().map(c => c.id).join(','), 'connection,k8s,workers');
-  h.edit('k8s', false); h.edit('k8s', true);
-  assert.equal(h.cards().map(c => c.id).join(','), 'connection,workers,k8s');
-  h.undo(); assert.equal(h.cards().map(c => c.id).join(','), 'connection,workers');
-  h.undo(); assert.equal(h.cards().map(c => c.id).join(','), 'connection,k8s,workers');
-});
-test('streaming and polling share one current connection card', () => {
-  const h = history(); h.edit('poll', true); h.edit('k8s', true); h.edit('poll', false);
-  assert.equal(h.cards().map(c => c.id).join(','), 'k8s,connection');
-  assert.equal(h.cards().find(c => c.id === 'connection').topic, 'Streaming');
-  h.edit('poll', true); h.edit('interval', 900);
-  assert.equal(h.cards().filter(c => c.id === 'connection').length, 1);
-  assert.equal(h.cards().find(c => c.id === 'connection').topic, 'Polling · 15 min');
-});
-test('numeric and model edits do not reorder the enabled cards', () => {
-  const h = history(); h.edit('workers', true); h.edit('burst', true);
-  const order = h.cards().map(c => c.id).join(',');
-  h.edit('burstN', 20); h.edit('calculation', 'asi');
-  assert.equal(h.cards().map(c => c.id).join(','), order);
 });
