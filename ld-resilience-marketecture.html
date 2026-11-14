@@ -969,7 +969,6 @@
 
   /* Model selection stays small; technical assumptions are optional presenter notes. */
   .sc-model { padding: 0 0 18px; margin-bottom: 20px; border-bottom: 1px solid var(--border); }
-  #sc-poll-note { white-space: pre-line; }
   .sc-model h2 { margin: 0 0 10px; font-size: 15px; }
   .sc-model > p { margin: 10px 0 0; color: var(--muted); font-size: 13px; }
   .sc-presenter-notes { margin-top: 12px; font-size: 12px; color: var(--muted); overflow-x: auto; }
@@ -2562,8 +2561,12 @@ window.ldMemo = {
     $("sc-poll-rule").textContent = asi ? "same running time, same count" : "not currently billed";
     $("sc-time-rule").textContent = asi ? "active SDK time" : "connected time";
     $("sc-poll-note").textContent = asi
-      ? "In Proposed ASI, polling frequency changes how quickly flag updates arrive. Running time determines the count.\nNote: PHP uses a provisional example."
+      ? "In Proposed ASI, polling frequency changes how quickly flag updates arrive. Running time determines the count."
       : "Polling usage is not currently billed. Switch to Proposed ASI to explore the active-time example.";
+    if (asi) {
+      $("sc-poll-note").appendChild(document.createTextNode(" "));
+      $("sc-poll-note").appendChild(el("em", null, "Note: PHP uses a provisional example."));
+    }
     Array.prototype.forEach.call(document.querySelectorAll("#panel-sc [data-calculation]"), function (b) {
       b.setAttribute("aria-checked", b.getAttribute("data-calculation") === opt.calculation ? "true" : "false");
     });
