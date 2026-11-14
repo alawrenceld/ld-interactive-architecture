@@ -967,29 +967,43 @@
   :is(#panel-sc, #panel-cmau) .controls { width: auto; }
   @media (max-width: 1279px) { :is(#panel-sc, #panel-cmau) .console { grid-template-columns: 1fr; } }
 
-  /* Billing comparison and scenario controls. Keep Relay cards in normal flow so
-     their text contributes to the container height at every breakpoint. */
-  #panel-sc .sc-relaywrap:not(.gone) { overflow: visible; max-height: none; }
+  /* Model selection stays small; technical assumptions are optional presenter notes. */
+  .sc-model { padding: 16px 18px; margin-bottom: 20px; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); }
+  .sc-model h2 { margin: 0 0 10px; font-size: 15px; }
+  .sc-model > p { margin: 10px 0 0; color: var(--muted); font-size: 13px; }
+  .sc-presenter-notes { margin-top: 12px; font-size: 12px; color: var(--muted); }
+  .sc-presenter-notes summary { cursor: pointer; }
+  .sc-presenter-notes p { max-width: 800px; margin: 10px 0; }
+  #panel-sc .controls { display: flex; flex-wrap: wrap; gap: 8px; }
+  #panel-sc button:disabled { opacity: .4; cursor: default; }
+  .sc-explanations { margin-top: 24px; }
+  .sc-explanations-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; flex-wrap: wrap; }
+  .sc-explanations h2 { margin: 0; font-size: 20px; }
+  #sc-explanation-cards { display: grid; gap: 12px; margin-top: 16px; }
+  .sc-explanation { padding: 20px; background: var(--panel); border: 1px solid var(--border); border-radius: 12px; }
+  .sc-explanation h3 { margin: 0 0 10px; font-size: 15px; }
+  .sc-explanation p { margin: 0; max-width: 850px; font-size: 14px; color: var(--muted); }
+  .sc-before-after { display: flex; gap: 32px; margin: 16px 0 0; }
+  .sc-before-after dt, .sc-before-after small { color: var(--muted); font-size: 12px; }
+  .sc-before-after dd { margin: 4px 0 0; font: 600 24px/1.3 "JetBrains Mono", monospace; }
+  #panel-sc .tnum.request-count { width: 8.5em; }
+  /* Reserve the Relay column on desktop. Only opacity changes, so row widths,
+     text wrapping and bars stay fixed when the Relay is toggled. */
+  #panel-sc .sc-relaywrap { flex: 0 0 280px; max-width: none; overflow: visible; transition: opacity .18s ease, visibility 0s; opacity: 1; visibility: visible; }
+  #panel-sc .sc-relaywrap.gone { max-width: none; opacity: .4; visibility: visible; pointer-events: none; }
+  #panel-sc .sc-relaywrap.gone .card { border-style: dashed; box-shadow: none; }
   #panel-sc .relays { display: flex; flex-direction: column; justify-content: center; gap: 16px; }
   #panel-sc .relays .sc-relay { position: relative; top: auto !important; flex: 0 0 auto; }
   #panel-sc .relays .sc-relay.gone { display: none; }
-  .sc-model { padding: 18px; margin-bottom: 20px; border: 1px solid var(--border); border-radius: 12px; background: var(--panel); }
-  .sc-model h2, .sc-scenario h2 { margin: 0 0 10px; font-size: 15px; }
-  .sc-model p, .sc-scenario p { font-size: 13px; line-height: 1.6; margin: 10px 0 0; color: var(--muted); }
-  .sc-comparison { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 12px; margin: 16px 0 0; }
-  .sc-comparison div { padding: 12px; border: 1px solid var(--border); border-radius: 8px; }
-  .sc-comparison dt { font-size: 12px; color: var(--muted); }
-  .sc-comparison dd { margin: 6px 0 0; font: 600 22px/1.3 "JetBrains Mono", monospace; }
-  .sc-scenario { margin: 20px 0; padding: 18px; border: 1px solid var(--border); border-radius: 12px; }
-  .sc-settings { display: flex; flex-wrap: wrap; gap: 8px; padding: 0; margin: 0; list-style: none; }
-  .sc-settings li { padding: 6px 10px; border-radius: 6px; background: var(--blue-ghost); font-size: 12px; }
-  #panel-sc .controls { display: flex; flex-wrap: wrap; gap: 8px; }
-  #panel-sc button:disabled { opacity: .4; cursor: default; }
-  #sc-compare-delta { font-weight: 600; color: var(--ink); }
-  @media (max-width: 599px) {
-    .sc-comparison { grid-template-columns: 1fr; }
-    #panel-sc .bseg { flex-wrap: wrap; border-radius: 12px; }
+  #panel-sc .irow { grid-template-columns: minmax(0, 1fr) auto; }
+  #panel-sc .irow .tcell { grid-column: 1 / -1; grid-row: 2; }
+  #panel-sc .twhen { min-height: 2.8em; }
+  @media (max-width: 1279px) {
+    #panel-sc .sc-relaywrap { flex-basis: auto; max-height: none; }
+    #panel-sc .sc-relaywrap.gone { display: flex; max-height: none; }
   }
+  @media (max-width: 599px) { #panel-sc .bseg { flex-wrap: wrap; border-radius: 12px; } }
+  @media (prefers-reduced-motion: reduce) { #panel-sc .sc-relaywrap { transition: none; } }
 
   /* questions we hear most */
   .faq { margin-top: clamp(40px, 6vw, 64px); max-width: 960px; }
@@ -1361,7 +1375,7 @@
   <div id="panel-sc" role="tabpanel" aria-labelledby="tab-sc" hidden>
   <div class="lede">
     <h1>How server-side usage becomes service connections.</h1>
-    <p>One server-side SDK instance connected to one environment for a full month is one <strong>service connection (SC)</strong>. Compare current usage with the proposed Active Server SDK Instances (ASI) approach using the same setup. This is an internal teaching model, not a bill estimate.</p>
+    <p>One SDK connected to one environment for a full month is one <strong>service connection (SC)</strong>. Shorter periods count as a fraction. Change the setup below to see what affects the count.</p>
   </div>
 
   <section class="sc-model" aria-labelledby="sc-model-heading">
@@ -1371,13 +1385,13 @@
       <button role="radio" aria-checked="false" data-calculation="asi">Proposed ASI</button>
     </div>
     <p id="sc-model-note"></p>
-    <dl class="sc-comparison">
-      <div><dt>Current calculated SCs</dt><dd id="sc-current-calculated">4.0</dd></div>
-      <div><dt>Current billed SCs</dt><dd id="sc-current-billed">4.0</dd></div>
-      <div><dt>Proposed ASI equivalent</dt><dd id="sc-proposed">4.0</dd></div>
-    </dl>
-    <p id="sc-compare-delta"></p>
-    <p>All totals use a 730-hour month (43,800 minutes). Proposed ASI illustrates the active-time goal for identifiable SDKs; it does not reproduce sampling or boundary effects.</p>
+    <details class="sc-presenter-notes">
+      <summary>Notes for presenters</summary>
+      <p>This is a simplified teaching example, not a complete comparison of current metering and ASI. Sampling, reconnects, short-lived processes and other scenario-matrix cases are not reproduced here.</p>
+      <p>Current polling is calculated at 30 seconds per poll but is not currently billed. Proposed ASI illustrates the goal of counting active SDK time, independent of polling frequency. PHP retains a provisional 30-second-per-poll fallback.</p>
+      <p>Workers in this example share one SDK instance ID. Separate SDK instance IDs count separately. Follow the process lifecycle supported by your SDK.</p>
+      <p>Examples use a 730-hour month (43,800 minutes).</p>
+    </details>
   </section>
 
   <div class="bopts" role="group" aria-label="Your setup">
@@ -1406,13 +1420,6 @@
   </div>
 
   <p class="mfoot" id="sc-poll-note"></p>
-  <section class="sc-scenario" aria-labelledby="sc-settings-heading">
-    <h2 id="sc-settings-heading">Current setup</h2>
-    <ul class="sc-settings" id="sc-settings"></ul>
-    <p id="sc-worker-note" hidden>This example assumes workers share one SDK instance ID. Workers with separate SDK instance IDs count separately. Follow your SDK’s supported process lifecycle; this is not a recommendation to initialize before forking.</p>
-    <p id="sc-php-note" hidden>PHP replaces only the production checkout service. One request makes one poll in this example. Proposed ASI provisionally retains the 30-second-per-poll fallback for PHP; its replacement is not finalized.</p>
-  </section>
-
   <div class="barch">
     <div class="sflow" id="sc-flow" aria-label="Your server-side SDKs and how they reach LaunchDarkly">
       <svg class="sc-wires" id="sc-wires" aria-hidden="true"></svg>
@@ -1477,18 +1484,18 @@
     </section>
   </div>
 
-  <div class="console">
-    <p class="narration" aria-live="polite">
-      <span class="step-k" id="sc-stepk"></span>
-      <span id="sc-story"></span>
-      <span class="mday" id="sc-change"></span>
-    </p>
-    <div class="controls">
-      <button class="btn-ghost" id="sc-undo" disabled>Undo</button>
-      <button class="btn-ghost" id="sc-redo" disabled>Redo</button>
-      <button class="btn-ghost" id="sc-reset" style="visibility:hidden">Reset everything</button>
+  <section class="sc-explanations" aria-labelledby="sc-explanations-heading">
+    <div class="sc-explanations-head">
+      <h2 id="sc-explanations-heading">What changed</h2>
+      <div class="controls">
+        <button class="btn-ghost" id="sc-undo" disabled>Undo</button>
+        <button class="btn-ghost" id="sc-redo" disabled>Redo</button>
+        <button class="btn-ghost" id="sc-reset" style="visibility:hidden">Reset everything</button>
+      </div>
     </div>
-  </div>
+    <p class="mfoot" id="sc-explanations-empty">Change your setup to add an explanation here. Each card shows the action, why the count changed, and the before and after SCs.</p>
+    <div id="sc-explanation-cards" aria-live="polite" aria-relevant="additions removals"></div>
+  </section>
 
   <section class="faq" aria-labelledby="sc-faq-h">
     <h2 id="sc-faq-h">Questions we hear most</h2>
@@ -1509,9 +1516,9 @@
     <details><summary>Why did our count suddenly spike?</summary>
       <p>Most often, code creates a new SDK client per request or in a loop instead of once at startup. Other causes are new deployments or replicas, forked worker processes that each start an SDK, and dev or preview apps. Give each app an application ID in its SDK configuration, and the Usage page will show which app is responsible.</p></details>
     <details><summary>Is polling a way to save?</summary>
-      <p>Current polling usage is calculated at 30 seconds per poll but is not included in billed SCs. Proposed ASI aims to count an identifiable SDK’s active time regardless of polling interval. In that proposed model, polling frequency changes update latency; active time determines usage. This is a proposed behavior, not current billing.</p></details>
+      <p>Polling is not currently billed. Proposed ASI aims to count how long an SDK is active, whether it streams or polls. In that example, changing the interval changes how quickly flags update, not the count.</p></details>
     <details><summary>How is PHP counted?</summary>
-      <p>PHP starts a new process for every request, so it can’t hold a stream open, and each request polls for flags. The current calculation counts each poll as 30 seconds, but polling usage is not currently billed. The Proposed ASI view retains this fallback provisionally for PHP; the replacement is not finalized. A flag with prerequisites can make more than one poll. Caching flag data between requests means fewer polls.</p></details>
+      <p>PHP starts a new process for every request, so it can’t hold a stream open, and each request polls for flags. This example counts each poll as 30 seconds. Polling is not currently billed. In Proposed ASI, the PHP example keeps that rule provisionally. A flag with prerequisites can make more than one poll. Caching flag data between requests means fewer polls.</p></details>
     <details><summary>We run Kubernetes or multi-process apps. Is there different pricing?</summary>
       <p>Some Enterprise contracts price these connections at a different rate. The count works the same way: every pod and process that starts an SDK still counts. Only the price per connection differs.</p></details>
     <details><summary>What about daemon mode or the Relay Proxy’s offline mode?</summary>
@@ -2174,9 +2181,9 @@ window.ldMemo = {
   // identifiable long-lived SDKs. PHP retains the 30s fallback provisionally.
   var INTERVALS = { 15: { l: "15s" }, 30: { l: "30s" }, 60: { l: "1 min" }, 300: { l: "5 min" }, 900: { l: "15 min" }, 3600: { l: "1 hour" } };
   function iv() { return INTERVALS[opt.interval]; }
-  var DEFAULTS = { k8s: false, workers: false, burst: false, daily: false, envs: false, relay: false, php: false, fn: false, poll: false, interval: 30, n: 4, burstN: 10, dailyN: 10, fnM: 60, phpM: 1, calculation: "current" };
+  var DEFAULTS = { k8s: false, workers: false, burst: false, daily: false, envs: false, relay: false, php: false, fn: false, poll: false, interval: 30, n: 4, burstN: 10, dailyN: 10, fnM: 60, phpRequests: 1000000, calculation: "current" };
   // numbers typed into the row titles, and the range each one accepts
-  var NUMS = { n: [1, 100], burstN: [1, 100], dailyN: [1, 100], fnM: [1, 1000], phpM: [0.1, 1000] };
+  var NUMS = { n: [1, 100], burstN: [1, 100], dailyN: [1, 100], fnM: [1, 1000], phpRequests: [1, 1000000000] };
   var PODS = 3;   // pods per server once the service moves to Kubernetes
   function n0(v) { return Math.round(v).toLocaleString("en-US"); }
   function plural(n, word) { return n + " " + word + (n === 1 ? "" : "s"); }
@@ -2193,7 +2200,7 @@ window.ldMemo = {
     burstN: ["Autoscaling", function () { return say.burst[1](); }, ""],
     dailyN: ["Daily scaling", function () { return say.daily[1](); }, ""],
     fnM: ["Lambda function", function () { return say.fn[1](); }, ""],
-    workers: ["Worker processes", "This example assumes 4 workers share one SDK instance ID per instance, so they count once. Workers with separate SDK instance IDs count separately. Follow your SDK’s supported lifecycle; neither initialization pattern is recommended by this example.",
+    workers: ["Worker processes", "In this example, four workers share one SDK instance ID, so the count stays the same. Workers with separate SDK instance IDs would count separately.",
               "One process per instance again, so one SDK per instance."],
     daily: ["Daily scaling", function () { var k = opt.dailyN; return "Every morning you scale up " + plural(k, "extra " + unitWord()) + ", and every night you scale " + (k === 1 ? "it" : "them") + " back down. They run 12 hours a day, half the month, so they count as " + k + " × ½ = " + f1(k / 2) + " service connections, not " + k + ". You pay for the hours they run, not your daily peak."; },
             "No daily scaling."],
@@ -2204,9 +2211,9 @@ window.ldMemo = {
     relay: ["Relay Proxy", "Your SDKs connect to a Relay Proxy in your network instead of to LaunchDarkly. The count doesn’t change: every SDK behind it still counts, and the Relay Proxy’s own connection isn’t billed. It saves network connections, not service connections.",
             "Your SDKs connect straight to LaunchDarkly. Same count either way."],
     php: ["PHP app", function () {
-      return "The production checkout service handles " + opt.phpM + " million requests, with one poll per request. " + phpExplanation();
+      return "The production checkout service handles " + n0(opt.phpRequests) + " requests. " + phpExplanation();
     }, function () { return "The checkout service is back on " + plural(opt.n * (opt.k8s ? PODS : 1), unitWord()) + ", connected all month."; }],
-    phpM: ["PHP requests", function () { return "PHP handles " + opt.phpM + " million requests. " + phpExplanation(); }, ""],
+    phpRequests: ["PHP requests", function () { return "PHP handles " + n0(opt.phpRequests) + " requests. " + phpExplanation(); }, ""],
     fn: ["Lambda function", function () { var h = fnHours(); return "A Lambda function handles " + opt.fnM + " million invocations a month, averaging 220 milliseconds each. That’s " + hrs(h) + " hours of running time. One service connection is a full month, 730 hours, so the function adds " + hrs(h) + " ÷ 730 ≈ " + f1(h / MONTH_HOURS) + ". Serverless counts running time, not invocations: halve the duration and you halve the count."; },
          "No serverless functions."],
     poll: ["Polling", function () { return pollStory(); },
@@ -2218,17 +2225,19 @@ window.ldMemo = {
     watch: ["Watch a month", "Watching a month go by, a day at a time. Every running SDK adds its connected time as it runs: always-on servers fill the count steadily, the sale adds its share only while it runs, and daily scaling climbs by day and pauses at night. The bar under the count fills to the month’s total.",
             "Back to the month’s totals."]
   };
-  function phpHours() { return opt.phpM * 1e6 * 30 / 3600; }
+  function phpHours() { return opt.phpRequests * 30 / 3600; }
   function phpExplanation() {
-    return "At 30 seconds per poll, that is " + hrs(phpHours()) + " hours, or " + fmt(phpHours() / MONTH_HOURS) +
-      " calculated SCs. " + (opt.calculation === "current" ? "Polling contributes zero billed SCs today." :
-      "Proposed ASI retains this PHP fallback provisionally; it is not the finalized PHP calculation.");
+    var result = fmt(phpHours() / MONTH_HOURS);
+    return "Each request makes one poll in this example. At 30 seconds per poll, " + n0(opt.phpRequests) +
+      " requests add up to " + result + " SCs. " + (opt.calculation === "current"
+      ? "This polling usage is not currently billed, so it adds zero to the meter."
+      : "The proposed PHP example still uses 30 seconds per poll provisionally.");
   }
   function pollStory() {
     if (opt.calculation === "current") return "Your SDKs poll every " + iv().l +
-      ". Current calculated usage assigns 30 seconds per poll, so interval changes calculated SCs. Polling is not currently billed; billed SCs remain zero for these polling SDKs.";
+      ". Polling is not currently billed, so these polling SDKs add zero to the count.";
     return "Your SDKs poll every " + iv().l +
-      ". Proposed ASI aims to count the same active SDK time as streaming. Polling frequency changes update latency; active time determines usage. The interval deliberately does not change this proposed active-time estimate.";
+      ". In Proposed ASI, the same SDK running for the same time has the same count. Polling frequency changes how quickly flag updates arrive, not this active-time estimate.";
   }
   var litRows = { n: ["app"], burstN: ["burst"], dailyN: ["daily"], fnM: ["fn"], k8s: ["app", "burst", "daily", "stg", "dev"], workers: ["app", "burst", "daily", "stg", "dev"], burst: ["burst"], daily: ["daily"], envs: ["stg", "dev"],
                   relay: ["relay"], php: ["app"], fn: ["fn"], poll: ["app", "burst", "daily", "stg", "dev"],
@@ -2248,10 +2257,10 @@ window.ldMemo = {
           when: "connected all month" + per, fleet: ["node", n, PODS, w] }
       : { id: "app", on: true, name: ["Checkout service · ", "n", " " + unit + (n === 1 ? "" : "s")], env: "production", sdks: n, frac: 1, x: x, chips: [], when: "connected all month" + per, fleet: [unit, n, w] };
     // PHP replaces production only, with one poll per request in this example.
-    if (opt.php) app = { id: "app", on: true, name: ["Checkout service · PHP · ", "phpM", "M requests"], env: "production", sdks: 1,
+    if (opt.php) app = { id: "app", on: true, name: ["Checkout service · PHP · ", "phpRequests", " requests"], env: "production", sdks: 1,
       frac: phpHours() / MONTH_HOURS, x: 1, chips: ["one poll per request"],
-      when: hrs(phpHours()) + " h calculated · " + (opt.calculation === "current" ? "not billed" : "provisional fallback"),
-      label: hrs(phpHours()) + " h ÷ 730 h", warn: true, fleet: ["req", 10, 0, "one short-lived process per request"] };
+      when: (opt.calculation === "current" ? "polling · not currently billed" : "30s per poll · provisional"),
+      label: "30s/poll · 730h/month", warn: true, fleet: ["req", 10, 0, "one short-lived process per request"] };
     return [
       // the production label only shows once there's non-production to tell it apart from
       { id: "sep-p", on: opt.envs, sep: true, label: "Production" },
@@ -2289,7 +2298,7 @@ window.ldMemo = {
   // the PHP checkout service polls on every request; everything else follows the streaming/polling choice
   function rowPolls(r) { var id = r.id || r; return opt.poll || (opt.php && id === "app"); }
   function f1(v) { return (Math.round(v * 10) / 10).toFixed(1); }
-  function fmt(v) { return v >= 100 ? Math.round(v).toLocaleString("en-US") : f1(v); }
+  function fmt(v) { return v > 0 && v < .1 ? "< 0.1" : v >= 100 ? Math.round(v).toLocaleString("en-US") : f1(v); }
 
   // build the rows once; each render only updates their text, classes and bar widths
   var rowEls = {};
@@ -2303,7 +2312,7 @@ window.ldMemo = {
     r.num.addEventListener("input", function () {
       var k = r.num.getAttribute("data-k"), lim = NUMS[k], v = Number(r.num.value);
       if (!k || !Number.isFinite(v) || r.num.value === "") return;                       // wait for a real number while they type
-      v = k === "phpM" ? Math.round(v * 10) / 10 : Math.round(v);
+      v = Math.round(v);
       var next = Math.max(lim[0], Math.min(lim[1], v));
       if (next === opt[k]) return;
       flip(k, next, r.num.scEditing); r.num.scEditing = true;
@@ -2382,10 +2391,14 @@ window.ldMemo = {
       b.setAttribute("aria-checked", (b.getAttribute("data-mode") === "poll") === opt.poll ? "true" : "false");
     });
     var relay = $("sc-relay");
-    // the Relay Proxy keeps its place when off, dashed and dimmed, so the diagram never reflows
+    // Keep an inactive placeholder in the same slot; toggling only changes opacity and wires.
     $("sc-relaywrap").classList.toggle("gone", !opt.relay);
     relay.classList.toggle("lit", opt.relay && hot.indexOf("relay") > -1);
-    $("sc-relayrole").textContent = opt.relay ? "The Relay Proxy’s own connection to LaunchDarkly isn’t billed. SDKs connected through it still count." :"Off. Your SDKs connect straight to LaunchDarkly.";
+    relay.querySelector(".badge").textContent = opt.relay ? "not billed" : "off";
+    ["sc-relay", "sc-relay-stg", "sc-relay-dev"].forEach(function (id) {
+      $(id).querySelector(".status span").textContent = opt.relay ? "not counted" : "not in use";
+    });
+    $("sc-relayrole").textContent = "The Relay Proxy’s own connection to LaunchDarkly isn’t billed. SDKs connected through it still count.";
     $("sc-p1").classList.toggle("idle", !opt.relay);
     // PHP polls but the other rows may still stream, so each link shows the mode of what it carries.
     // The Relay Proxy's own link to LaunchDarkly follows the streaming/polling choice, not PHP.
@@ -2417,8 +2430,9 @@ window.ldMemo = {
       if (nm[1]) {
         e.num.setAttribute("data-k", nm[1]);
         e.num.min = NUMS[nm[1]][0]; e.num.max = NUMS[nm[1]][1];
-        e.num.step = nm[1] === "phpM" ? "0.1" : "1";
-        e.num.setAttribute("aria-label", { n: "Number of " + unitWord() + "s", burstN: "Extra " + unitWord() + "s for the sale", dailyN: "Extra " + unitWord() + "s each day", fnM: "Millions of invocations", phpM: "Millions of PHP requests" }[nm[1]]);
+        e.num.step = "1";
+        e.num.classList.toggle("request-count", nm[1] === "phpRequests");
+        e.num.setAttribute("aria-label", { n: "Number of " + unitWord() + "s", burstN: "Extra " + unitWord() + "s for the sale", dailyN: "Extra " + unitWord() + "s each day", fnM: "Millions of invocations", phpRequests: "PHP requests per month" }[nm[1]]);
         if (document.activeElement !== e.num) e.num.value = opt[nm[1]];
       }
       e.chips.textContent = "";
@@ -2429,7 +2443,7 @@ window.ldMemo = {
       e.fill.style.width = !r.on ? "0%" : r.daily ? "100%" : Math.min(100, Math.max(2, r.frac * 100)) + "%";
       e.v.textContent = !r.on ? "0.0" : r.dp ? v.toFixed(r.dp) : v > 0 && v < .1 ? "< 0.1" : fmt(v);
       e.small.textContent = opt.calculation === "current" && rowPolls(r) && r.id !== "fn"
-        ? fmt(rowCalculated(r, "current")) + " calculated · not billed"
+        ? "polling · not currently billed"
         : r.label || (r.sdks + " × " + (r.span || "full month"));
     });
     if (watching) paintMonth(tNow);
@@ -2442,10 +2456,6 @@ window.ldMemo = {
     Array.prototype.forEach.call(document.querySelectorAll("#panel-sc .mrows > div"), function (d) {
       d.classList.toggle("lit", !!last && d.id === meterRow[last]);
     });
-    $("sc-stepk").textContent = last === "calculation" ? "calculation model" : last === "reset" ? "setup reset" : !last ? "your setup" : last === "interval" ? "polling interval · " + iv().l : last === "watch" ? "watch a month" : NUMS[last] ? say[last][0] + " · " + opt[last] + (last === "fnM" ? "M invocations" : "") : say[last][0] + (opt[last] ? " · on" : " · off");
-    var line = last && say[last] && say[last][last === "interval" || last === "watch" || NUMS[last] || opt[last] ? 1 : 2];
-    $("sc-story").textContent = last === "calculation" ? $("sc-model-note").textContent : last === "reset" ? "Restored the default setup. Undo restores your previous scenario." : last ? (typeof line === "function" ? line() : line)
-      : "Review all active conditions in Current setup. Switch a condition or edit a number to see its effect, then use Undo and Redo to compare.";
     $("sc-intsel").value = String(opt.interval);
     $("sc-int").classList.toggle("dim", !opt.poll);
     $("sc-intsel").disabled = !opt.poll;
@@ -2453,16 +2463,16 @@ window.ldMemo = {
     $("sc-reset").style.visibility = any ? "visible" : "hidden";
     ldMemo.set("server", opt);
   }
-  var undoStack = [], redoStack = [], changeText = "";
+  var undoStack = [], redoStack = [], changeText = "", explanations = [];
   function stateCopy() { return Object.assign({}, opt); }
-  function snapshot() { return { state: stateCopy(), last: last, change: changeText }; }
+  function snapshot() { return { state: stateCopy(), last: last, change: changeText, explanations: explanations.slice() }; }
   function displayed() { var t = totals(); return opt.calculation === "current" ? t.billed : t.proposed; }
   function signed(n) { return (n > 0 ? "+" : "") + fmt(n); }
   function setting(k, value) {
     if (k === "calculation") return value === "current" ? "Current" : "Proposed ASI";
     if (k === "poll") return value ? "Polling" : "Streaming";
     if (k === "interval") return INTERVALS[value].l;
-    if (NUMS[k]) return String(value);
+    if (NUMS[k]) return n0(value);
     return value ? "on" : "off";
   }
   function flip(k, v, coalesce) {
@@ -2472,58 +2482,67 @@ window.ldMemo = {
       var current = opt; opt = undoStack[undoStack.length - 1].state;
       before = displayed(); prev = opt[k]; opt = current;
     } else undoStack.push(snapshot());
+    if (coalesce && undoStack.length) explanations = undoStack[undoStack.length - 1].explanations.slice();
     redoStack = [];
     setWatch(false); opt[k] = v; last = k; cleared = false;
     var name = k === "calculation" ? "Calculation model" : k === "interval" ? "Polling interval" : k === "poll" ? "Connection" : say[k][0];
     changeText = name + ": " + setting(k, prev) + " → " + setting(k, v) + ". " +
       fromModel + " " + fmt(before) + " → " + setting("calculation", opt.calculation) + " " + fmt(displayed()) +
       "; Δ " + signed(displayed() - before) + " SC equivalent.";
+    var line = k === "calculation" ? modelExplanation() : say[k][k === "interval" || NUMS[k] || opt[k] ? 1 : 2];
+    var explanation = typeof line === "function" ? line() : line;
+    if (opt.php && (k === "n" || k === "k8s")) {
+      explanation = "The PHP checkout service still uses the request count in this example. Infrastructure changes do not change that request count; other always-on workloads follow the setup you selected.";
+    } else if (opt.calculation === "current" && opt.poll) {
+      var running = opt.n * (opt.k8s ? PODS : 1);
+      if (k === "n" || k === "k8s") explanation = "The checkout service now runs " + running + " SDKs. These SDKs are polling, which is not currently billed.";
+      if (k === "burst" || k === "burstN") explanation = opt.burst ? "The sale adds " + opt.burstN + " extra SDKs for three days. These SDKs are polling, which is not currently billed." : "No burst this month.";
+      if (k === "daily" || k === "dailyN") explanation = opt.daily ? "Daily scaling adds " + opt.dailyN + " extra SDKs from 8am to 8pm. These SDKs are polling, which is not currently billed." : "No daily scaling.";
+      if (k === "envs") explanation = opt.envs ? "Staging and dev each add one SDK running all month. These SDKs are polling, which is not currently billed." : "Production only.";
+    }
+    explanations.push({ topic: name, action: setting(k, prev) + " → " + setting(k, v), explanation: explanation,
+      before: before, after: displayed(), beforeModel: fromModel, afterModel: setting("calculation", opt.calculation) });
     renderSC(); drawWires();
   }
   function restore(from, to) {
     if (!from.length) return;
     to.push(snapshot()); var saved = from.pop();
-    setWatch(false); cleared = false; opt = saved.state; last = saved.last; changeText = saved.change;
+    setWatch(false); cleared = false; opt = saved.state; last = saved.last; changeText = saved.change; explanations = saved.explanations.slice();
     renderSC(); drawWires();
   }
+  function modelExplanation() {
+    return opt.calculation === "asi"
+      ? "Proposed ASI counts active SDK time in this simplified example. The same running time has the same count, whether an SDK streams or polls. PHP still uses a provisional example."
+      : "Current shows billed service connections. Polling usage is not currently billed.";
+  }
   function renderScenario() {
-    var t = totals(), asi = opt.calculation === "asi";
-    $("sc-current-calculated").textContent = fmt(t.calculated);
-    $("sc-current-billed").textContent = fmt(t.billed);
-    $("sc-proposed").textContent = fmt(t.proposed);
-    $("sc-compare-delta").textContent = "Proposed ASI vs current billed: " + signed(t.proposed - t.billed) + " SC equivalent for this setup.";
-    $("sc-model-note").textContent = asi
-      ? "Proposed ASI — not approved. The main meter illustrates active SDK time. Polling is included in this proposed estimate; PHP uses a provisional 30s/poll fallback."
-      : "Current. The main meter shows billed SCs. Polling is calculated at 30 seconds per poll but is not currently included in billed SCs.";
-    $("sc-count-label").textContent = asi ? "Proposed ASI equivalent" : "Current billed SCs";
-    $("sc-count-unit").textContent = asi ? "SC equivalent · proposed" : "service connections · billed";
-    $("sc-poll-rule").textContent = asi ? "active time · PHP fallback provisional" : "30s/poll calculated · not billed";
-    $("sc-time-rule").textContent = asi ? "active SDK time (illustrative)" : "streaming time; polling excluded";
+    var asi = opt.calculation === "asi";
+    $("sc-model-note").textContent = asi ? "Proposed ASI · illustrative, not approved" : "Current billing";
+    $("sc-count-label").textContent = asi ? "Proposed ASI example" : "Current billed SCs";
+    $("sc-count-unit").textContent = asi ? "service connections · proposed" : "service connections";
+    $("sc-poll-rule").textContent = asi ? "same running time, same count*" : "not currently billed";
+    $("sc-time-rule").textContent = asi ? "active SDK time" : "connected time";
     $("sc-poll-note").textContent = asi
-      ? "Proposed ASI: polling frequency changes update latency; active time determines usage for identifiable SDKs. PHP is a separate provisional example."
-      : "Current: interval changes calculated polling usage, but polling contributes zero billed SCs. The comparison above shows both quantities.";
+      ? "In Proposed ASI, polling frequency changes how quickly flag updates arrive; running time determines the count. *PHP uses a provisional example."
+      : "Polling usage is not currently billed. Switch to Proposed ASI to explore the active-time example.";
     Array.prototype.forEach.call(document.querySelectorAll("#panel-sc [data-calculation]"), function (b) {
       b.setAttribute("aria-checked", b.getAttribute("data-calculation") === opt.calculation ? "true" : "false");
     });
-    // Fixed order matches the controls, independent of the order of actions.
-    var settings = [setting("calculation", opt.calculation), (opt.php ? "PHP checkout · " + opt.phpM + "M requests" : opt.n + " servers")];
-    settings.push((opt.php ? "Other SDKs: " : "") + (opt.poll ? "Polling · " + iv().l : "Streaming"));
-    ["k8s", "workers", "burst", "daily", "envs", "relay", "fn"].forEach(function (k) {
-      if (!opt[k]) return;
-      var text = say[k][0];
-      if (k === "k8s") text += " · 3 pods/server";
-      if (k === "workers") text += " · 4 share one SDK ID";
-      if (k === "burst") text += " · " + opt.burstN + " extra for 3 days";
-      if (k === "daily") text += " · " + opt.dailyN + " extra, 8am–8pm";
-      if (k === "envs") text += " · 1 SDK each, all month";
-      if (k === "fn") text += " · " + opt.fnM + "M × 220ms";
-      settings.push(text);
+    var box = $("sc-explanation-cards"); box.textContent = "";
+    $("sc-explanations-empty").hidden = explanations.length > 0;
+    explanations.forEach(function (item, index) {
+      var card = el("article", "sc-explanation");
+      card.appendChild(el("h3", null, (index + 1) + ". " + item.topic + " · " + item.action));
+      card.appendChild(el("p", null, item.explanation));
+      var counts = el("dl", "sc-before-after");
+      [["Before SC", item.before, item.beforeModel], ["After SC", item.after, item.afterModel]].forEach(function (entry) {
+        var cell = el("div"); cell.appendChild(el("dt", null, entry[0]));
+        cell.appendChild(el("dd", null, fmt(entry[1])));
+        if (item.beforeModel !== item.afterModel) cell.appendChild(el("small", null, entry[2]));
+        counts.appendChild(cell);
+      });
+      card.appendChild(counts); box.appendChild(card);
     });
-    $("sc-settings").textContent = "";
-    settings.forEach(function (text) { $("sc-settings").appendChild(el("li", null, text)); });
-    $("sc-worker-note").hidden = !opt.workers;
-    $("sc-php-note").hidden = !opt.php;
-    $("sc-change").textContent = changeText || "Change a setting to see its SC delta and explanation below.";
     $("sc-undo").disabled = !undoStack.length;
     $("sc-redo").disabled = !redoStack.length;
   }
@@ -2622,10 +2641,10 @@ window.ldMemo = {
     var svg = $("sc-wires");
     svg.textContent = "";
     var side = matchMedia("(min-width: 1280px)").matches, on = opt.relay;
-    ["sc-relay-stg", "sc-relay-dev"].forEach(function (id) { $(id).classList.toggle("gone", !(on && opt.envs)); });
+    ["sc-relay-stg", "sc-relay-dev"].forEach(function (id) { $(id).classList.toggle("gone", !opt.envs); });
     $("sc-p1").classList.toggle("wired", side && on);
-    $("sc-p2").classList.toggle("wired", side && on);
-    if (!side || !on) { ["sc-relay", "sc-relay-stg", "sc-relay-dev"].forEach(function (id) { $(id).style.top = ""; }); return; }
+    $("sc-p2").classList.toggle("wired", side);
+    if (!side) { ["sc-relay", "sc-relay-stg", "sc-relay-dev"].forEach(function (id) { $(id).style.top = ""; }); return; }
     var flow = $("sc-flow").getBoundingClientRect(), col = $("sc-relays").getBoundingClientRect();
     // which boxes each proxy serves, and the span they cover
     var groups = {};
@@ -2637,6 +2656,13 @@ window.ldMemo = {
       (groups[g] = groups[g] || []).push(r);
     });
     var ld = document.querySelector("#panel-sc .sc-ld .card").getBoundingClientRect();
+    if (!on) {
+      Object.keys(groups).forEach(function (id) { groups[id].forEach(function (r) {
+        link(svg, ld.left - flow.left, ld.top - flow.top + ld.height / 2,
+          r.right - flow.left + 2, r.top - flow.top + r.height / 2, r.poll);
+      }); });
+      return;
+    }
     Object.keys(groups).forEach(function (id) {
       var rows = groups[id], card = $(id), rect = card.getBoundingClientRect();
       var cx = rect.left - flow.left, cy = rect.top - flow.top + rect.height / 2;
@@ -2661,14 +2687,17 @@ window.ldMemo = {
   $("sc-undo").addEventListener("click", function () { restore(undoStack, redoStack); });
   $("sc-redo").addEventListener("click", function () { restore(redoStack, undoStack); });
   $("sc-reset").addEventListener("click", function () {
-    var before = displayed(); undoStack.push(snapshot()); redoStack = [];
+    var before = displayed(), beforeModel = setting("calculation", opt.calculation); undoStack.push(snapshot()); redoStack = [];
     Object.keys(DEFAULTS).forEach(function (k) { opt[k] = DEFAULTS[k]; });
     setWatch(false); cleared = false;
     last = "reset"; changeText = "Reset setup: " + fmt(before) + " → " + fmt(displayed()) + "; Δ " + signed(displayed() - before) + " SC equivalent.";
+    explanations.push({ topic: "Reset setup", action: "defaults restored", explanation: "Back to four servers, streaming in production, using Current billing.",
+      before: before, after: displayed(), beforeModel: beforeModel, afterModel: "Current" });
     renderSC(); drawWires();
   });
   Object.keys(DEFAULTS).forEach(function (k) { opt[k] = DEFAULTS[k]; });
   var saved = ldMemo.get("server");
+  if (saved && saved.phpRequests === undefined && typeof saved.phpM === "number") saved.phpRequests = Math.round(saved.phpM * 1e6);
   if (saved && typeof saved === "object") Object.keys(DEFAULTS).forEach(function (k) {
     var v = saved[k];
     if (typeof v !== typeof DEFAULTS[k]) return;

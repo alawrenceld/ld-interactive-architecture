@@ -37,8 +37,8 @@ test('PHP: 1M polls at 30s/poll are calculated, excluded from current billing', 
   near(t.billed, 0); near(t.proposed, t.calculated);
 });
 test('editable PHP requests scale the provisional fallback without using polling interval', () => {
-  const a = model({ php: true, phpM: 1 }).totals();
-  const b = model({ php: true, phpM: 2, interval: 900 }).totals();
+  const a = model({ php: true, phpRequests: 1000000 }).totals();
+  const b = model({ php: true, phpRequests: 2000000, interval: 900 }).totals();
   near(b.calculated, 2 * a.calculated); near(b.proposed, 2 * a.proposed);
 });
 test('PHP replaces production only; streaming staging and dev remain billed', () => {
@@ -92,22 +92,23 @@ function history() {
       redo: function () { restore(redoStack, undoStack); },
       state: function () { return Object.assign({}, opt); },
       sizes: function () { return [undoStack.length, redoStack.length]; },
-      change: function () { return changeText; }
+      change: function () { return changeText; },
+      cards: function () { return explanations.slice(); }
     };`, context);
   return context.history;
 }
 test('Undo/Redo restores numeric, interval and model edits in order', () => {
   const h = history();
   h.edit('poll', true); h.edit('interval', 900); h.edit('calculation', 'asi');
-  h.edit('php', true); h.edit('phpM', 2);
-  h.undo(); near(h.state().phpM, 1);
+  h.edit('php', true); h.edit('phpRequests', 2000000);
+  h.undo(); near(h.state().phpRequests, 1000000);
   h.undo(); assert.equal(h.state().php, false);
   h.undo(); assert.equal(h.state().calculation, 'current');
   h.undo(); near(h.state().interval, 30);
   h.undo(); assert.equal(h.state().poll, false);
   for (let i = 0; i < 5; i++) h.redo();
   assert.equal(h.state().calculation, 'asi'); near(h.state().interval, 900);
-  near(h.state().phpM, 2); assert.equal(h.state().php, true);
+  near(h.state().phpRequests, 2000000); assert.equal(h.state().php, true);
 });
 test('new edits clear Redo; repeating the selected value is not an action', () => {
   const h = history();
@@ -117,8 +118,46 @@ test('new edits clear Redo; repeating the selected value is not an action', () =
 });
 test('multiple keystrokes in one numeric edit are one undoable action and one delta', () => {
   const h = history();
-  h.edit('phpM', 2); h.edit('phpM', 20, true); h.edit('phpM', 200, true);
-  assert.equal(h.sizes()[0], 1); assert.match(h.change(), /PHP requests: 1 → 200/);
-  h.undo(); near(h.state().phpM, 1);
-  h.redo(); near(h.state().phpM, 200);
+  h.edit('phpRequests', 2000000); h.edit('phpRequests', 20000000, true); h.edit('phpRequests', 200000000, true);
+  assert.equal(h.sizes()[0], 1); assert.match(h.change(), /PHP requests: 1,000,000 → 200,000,000/);
+  h.undo(); near(h.state().phpRequests, 1000000);
+  h.redo(); near(h.state().phpRequests, 200000000);
+});
+
+test('PHP request counts can be smaller than one hundred thousand', () => {
+  for (const phpRequests of [1, 42, 9999, 100001]) {
+    near(model({ php: true, phpRequests }).totals().proposed, phpRequests * 30 / (730 * 3600));
+  }
+});
+test('explanation cards retain action order and the before/after context', () => {
+  const h = history();
+  h.edit('workers', true); h.edit('n', 8); h.edit('relay', true);
+  const cards = h.cards();
+  assert.equal(cards.length, 3);
+  assert.equal(cards[0].topic, 'Worker processes');
+  near(cards[0].before, 4); near(cards[0].after, 4);
+  near(cards[1].before, 4); near(cards[1].after, 8);
+  assert.equal(cards[2].topic, 'Relay Proxy');
+  h.undo(); assert.equal(h.cards().length, 2);
+  h.redo(); assert.equal(h.cards().length, 3);
+});
+test('one numeric edit produces one explanation card, including multiple keystrokes', () => {
+  const h = history();
+  h.edit('n', 5); h.edit('n', 50, true);
+  assert.equal(h.cards().length, 1);
+  near(h.cards()[0].before, 4); near(h.cards()[0].after, 50);
+  h.undo(); assert.equal(h.cards().length, 0);
+  h.redo(); assert.equal(h.cards().length, 1);
+});
+test('Current polling cards do not claim a billed increase for infrastructure changes', () => {
+  const h = history(); h.edit('poll', true); h.edit('k8s', true);
+  const card = h.cards()[1];
+  near(card.before, 0); near(card.after, 0);
+  assert.match(card.explanation, /12 SDKs/);
+  assert.match(card.explanation, /not currently billed/);
+  assert.doesNotMatch(card.explanation, /12 service connections/);
+});
+test('Kubernetes card keeps the PHP request workload distinct', () => {
+  const h = history(); h.edit('php', true); h.edit('k8s', true);
+  assert.match(h.cards()[1].explanation, /do not change that request count/);
 });

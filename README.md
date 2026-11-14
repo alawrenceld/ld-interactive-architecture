@@ -52,11 +52,13 @@ built from the top Gong, Zendesk and Slack questions in Enterpret.
   instance, forked from one SDK, so each instance still counts once), autoscaling (10 extra for 3 days), daily scaling (10 extra, 8am to 8pm), staging and dev, Relay Proxy,
   PHP (rewrites the checkout service in PHP, which polls on every request) and a Lambda function. The meter and each row
   recompute from the switches; the narration explains the last one flipped.
-  The server count, both scaling counts, PHP millions of requests and Lambda's
-  millions of invocations are editable numbers in the row titles. Current setup
-  lists all active conditions in control order. Undo/Redo restores toggles,
-  numbers, interval, model selection and Reset; new edits clear Redo. History
-  lasts for the page session, while the setup persists across reloads.
+  The server count, both scaling counts, PHP request counts and Lambda's
+  millions of invocations are editable numbers in the row titles. PHP accepts
+  individual requests, from 1 to 1 billion. Explanation cards appear in action
+  order, each with the action, a short explanation and Before SC / After SC.
+  Undo/Redo restores both the setup and its cards; numeric keystrokes are grouped
+  as one edit. New edits clear Redo. History lasts for the page session, while
+  the setup persists across reloads.
   The infrastructure box draws each server or pod with a dot per SDK, and
   folds away use cases that are off; staging and dev always sit last, under a
   "Staging and dev" divider. With the Relay Proxy on, a link runs to every box; staging and dev each
@@ -64,15 +66,18 @@ built from the top Gong, Zendesk and Slack questions in Enterpret.
   The "Watch a month" button plays the current setup day by day (18 seconds)
   while a bar under the count fills to the month's total, then becomes
   "Reset", which restores the month's totals.
-  Current / Proposed ASI changes the meter without changing the setup. The
-  comparison always shows current calculated SCs, current billed SCs and the
-  proposed ASI equivalent. Current polling contributes 30 seconds per poll to
-  calculated usage and zero billed SCs. Proposed ASI illustrates the goal of
+  Current / Proposed ASI changes the single meter without changing the setup.
+  This is a simplified teaching example, not an exhaustive scenario-matrix
+  comparison. Current polling contributes zero billed SCs; its 30-second-per-poll
+  calculation is described only where relevant to the PHP example or presenter
+  notes. Proposed ASI illustrates the goal of
   interval-independent active time for identifiable, always-on SDKs; it is not
   a reproduction of sampling or boundary effects. PHP retains 30 seconds per
   poll provisionally in the proposed view, pending a replacement calculation.
-  Workers explicitly assume a shared SDK instance ID; this is not advice to
-  initialize before forking. All server-side examples normalize to 730 hours
+  Workers explicitly assume a shared SDK instance ID. Lifecycle details and
+  calculation limitations are in collapsed Notes for presenters. Relay keeps
+  an inactive placeholder in the same slot when off, so toggling it fades in
+  place without changing row widths, text wrapping or bar positions. All server-side examples normalize to 730 hours
   (43,800 minutes), including autoscaling, PHP and Lambda.
 
 Billing views are internal teaching examples, not bill estimates. Proposed ASI
