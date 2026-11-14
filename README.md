@@ -55,10 +55,14 @@ built from the top Gong, Zendesk and Slack questions in Enterpret.
   The server count, both scaling counts, PHP request volume and Lambda's
   millions of invocations are editable. PHP defaults to 1 M, with requests / K /
   M / B display units that preserve the underlying count. The original
-  latest-action summary remains, with a compact Before SC / After SC line.
-  Optional setup info cards describe currently enabled options once each.
-  Disabling an option removes its card. Cards have no action history or repeated
-  SC values. Undo/Redo restores the setup and latest summary; numeric keystrokes
+  latest-action summary remains, without a repeated SC delta below the meter.
+  Setup info cards follow activation order. Turning an option off removes its
+  card; turning it back on appends it. Streaming and Polling share one current
+  connection card. Numeric and model edits keep card positions. Order persists
+  across reloads and Undo/Redo. Cards share a height measured from the worker
+  explanation at the current column width. Entries fade in; departures fade out
+  before the remaining cards move into place. Reduced motion skips animation.
+  Undo/Redo restores the setup and latest summary; numeric keystrokes
   are grouped as one edit. New edits clear Redo. History lasts for the page
   session, while the setup persists across reloads.
   The infrastructure box draws each server or pod with a dot per SDK, and
