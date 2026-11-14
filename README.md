@@ -52,24 +52,46 @@ built from the top Gong, Zendesk and Slack questions in Enterpret.
   instance, forked from one SDK, so each instance still counts once), autoscaling (10 extra for 3 days), daily scaling (10 extra, 8am to 8pm), staging and dev, Relay Proxy,
   PHP (rewrites the checkout service in PHP, which polls on every request) and a Lambda function. The meter and each row
   recompute from the switches; the narration explains the last one flipped.
-  The server count, both scaling counts and the Lambda's millions of
-  invocations are editable numbers in the row titles.
+  The server count, both scaling counts, PHP request volume and Lambda's
+  millions of invocations are editable. PHP defaults to 1 M, with requests / K /
+  M / B display units that preserve the underlying count. The original
+  infrastructure-card layout and latest-action summary are retained. Undo/Redo
+  restores the setup and summary; numeric keystrokes are grouped as one edit.
+  New edits clear Redo. History lasts for the page session, while the setup
+  persists across reloads.
   The infrastructure box draws each server or pod with a dot per SDK, and
   folds away use cases that are off; staging and dev always sit last, under a
-  "Not production" divider. With the Relay Proxy on, a link runs to every box; staging and dev each
+  "Staging and dev" divider. With the Relay Proxy on, a link runs to every box; staging and dev each
   get their own Relay Proxy, and LaunchDarkly links to each proxy.
   The "Watch a month" button plays the current setup day by day (18 seconds)
   while a bar under the count fills to the month's total, then becomes
   "Reset", which restores the month's totals.
-  Polling follows the polling billing tech spec (Poppy Han, 2026): SDKs that
-  send an instance ID count by running time, so polling at any interval
-  counts the same as streaming. PHP polls on every request, so
-  its row counts 30 seconds per poll.
+  Current / Proposed ASI changes the single meter without changing the setup.
+  This is a simplified teaching example, not an exhaustive scenario-matrix
+  comparison. Current polling contributes zero billed SCs; its 30-second-per-poll
+  calculation is described only where relevant to the PHP example or presenter
+  notes. Proposed ASI illustrates the goal of
+  interval-independent active time for identifiable, always-on SDKs; it is not
+  a reproduction of sampling or boundary effects. PHP retains 30 seconds per
+  poll provisionally in the proposed view, pending a replacement calculation.
+  Workers explicitly assume a shared SDK instance ID. Lifecycle details and
+  calculation limitations are in collapsed Notes for presenters, organized as
+  three short labeled rules with natural text wrapping. Model selection is a small
+  heading and buttons above a divider, without a background card or redundant
+  model-status comment.
+  Relay is absent when off and appears in place when enabled. Usage bars use
+  the original compact row layout. All server-side examples normalize to 730 hours
+  (43,800 minutes), including autoscaling, PHP and Lambda.
 
-Billing copy reflects current public docs as of November 2026. It avoids
-dollar amounts and daemon mode. Polling follows the
-unreleased tech spec; as of late October 2026 polling was not yet billed.
-Re-check before external use.
+Billing views are internal teaching examples, not bill estimates. Proposed ASI
+is not approved. The public docs' 732-polls-per-SC statement does not describe
+the current polling calculation or billed quantity and needs a separate docs
+correction. Re-check calculation assumptions before external use.
+
+Run the dependency-free calculation and history checks with
+`node --test tests/billing-model.test.cjs`. Open the HTML in a browser to check
+editing, model selection, mixed PHP/streaming environments, Relay layout and
+Undo/Redo.
 
 ### ld-architecture-value.html
 The architectural-value story as four benefit scenes. One delivery diagram
